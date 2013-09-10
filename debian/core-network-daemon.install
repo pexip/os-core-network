@@ -1,0 +1,8 @@
+etc
+usr/lib/python*
+usr/sbin
+usr/share/core/examples/co[nr][et]* usr/share/doc/core-network-daemon/examples
+usr/share/core/examples/[fhmns]* usr/share/doc/core-network-daemon/examples
+usr/share/man/man1/core-[cdx]*
+usr/share/man/man1/cores*
+usr/share/man/man1/[nv]*

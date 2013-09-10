@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+#export DH_VERBOSE=1
+
+%:
+	dh $@  --with autotools-dev --parallel
+
+override_dh_auto_configure:
+	sh bootstrap.sh
+	dh_auto_configure
+
+override_dh_installinit:
+	dh_installinit -p core-network-daemon -o core-daemon --name=core-daemon
+
+override_dh_compress:
+	dh_compress -X.py -Xsample

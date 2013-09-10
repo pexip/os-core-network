@@ -1,0 +1,17 @@
+core-network (4.6~rc6-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/copyright: updated URL in Source field.
+  * debian/control:
+      - changed Architecture field from 'any' to 'all'
+        in core-network binary.
+      - fixed Vcs-Browser field.
+  * debian/watch: updated URL.
+
+ -- Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>  Tue, 10 Sep 2013 14:33:59 -0300
+
+core-network (4.6~rc5-1) unstable; urgency=low
+
+  * Initial release (Closes: #714076)
+
+ -- Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>  Wed, 28 Aug 2013 17:30:27 -0300

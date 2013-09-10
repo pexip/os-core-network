@@ -1,0 +1,113 @@
+Source: core-network
+Section: net
+Priority: optional
+Maintainer: Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>
+Uploaders: Jeffrey M. Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
+Build-Depends: debhelper (>= 9),
+               automake,
+               autotools-dev,
+               bridge-utils,
+               ebtables,
+               gcc (>= 4.8.1-2~),
+               help2man,
+               imagemagick,
+               iproute2,
+               libev-dev,
+               pkg-config,
+               python-dev,
+               python-support
+Standards-Version: 3.9.4
+Homepage: http://cs.itd.nrl.navy.mil/work/core
+Vcs-Git: git://anonscm.debian.org/collab-maint/core-network.git
+Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/core-network.git
+
+Package: core-network
+Architecture: all
+Depends: ${misc:Depends}, core-network-daemon, core-network-gui
+Suggests: tcpdump
+Description: intuitive network emulator that interacts with real nets (metapackage)
+ The Common Open Research Emulator (CORE) is a tool for emulating
+ networks in one or more machines. You can connect these emulated
+ networks to live networks.
+ .
+ CORE consists of a GUI for drawing topologies of lightweight virtual
+ machines, and Python modules for scripting network emulation.
+ .
+ Key features:
+ .
+   1. Network lab in a box
+        - Efficient and scalable
+        - Easy-to-use GUI canvas
+        - Centralized configuration and control
+   2. Runs applications and protocols without modifying them
+   3. Real-time connection to live networks
+        - Hardware-in-the-loop
+        - Distributed with multiple COREs
+   4. Highly customizable
+   5. The emulated machines can use several resources and programs
+      installed on the real machine, as tcpdump.
+ .
+ This is a metapackage depending on the packages for the CORE daemon and GUI.
+
+Package: core-network-daemon
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         bridge-utils,
+         ebtables,
+         iproute2,
+         python
+Recommends: quagga
+Suggests: core-network-gui
+Description: intuitive network emulator that interacts with real nets (daemon)
+ The Common Open Research Emulator (CORE) is a tool for emulating
+ networks in one or more machines. You can connect these emulated
+ networks to live networks.
+ .
+ CORE consists of a GUI for drawing topologies of lightweight virtual
+ machines, and Python modules for scripting network emulation.
+ .
+ Key features:
+ .
+   1. Network lab in a box:
+        - Efficient and scalable.
+        - Easy-to-use GUI canvas.
+        - Centralized configuration and control.
+   2. Runs applications and protocols without modifying them.
+   3. Real-time connection to live networks:
+        - Hardware-in-the-loop.
+        - Distributed with multiple COREs.
+   4. Highly customizable.
+   5. The emulated machines can use several resources and programs
+      installed on the real machine, as tcpdump.
+ .
+ This package provides the daemon that makes the emulated
+ network available for one or several environments.
+
+Package: core-network-gui
+Architecture: any
+Depends: ${misc:Depends}, libtk-img, tk
+Suggests: core-network-daemon, tcpdump
+Description: intuitive network emulator that interacts with real nets (GUI)
+ The Common Open Research Emulator (CORE) is a tool for emulating
+ networks in one or more machines. You can connect these emulated
+ networks to live networks.
+ .
+ CORE consists of a GUI for drawing topologies of lightweight virtual
+ machines, and Python modules for scripting network emulation.
+ .
+ Key features:
+ .
+   1. Network lab in a box
+        - Efficient and scalable
+        - Easy-to-use GUI canvas
+        - Centralized configuration and control
+   2. Runs applications and protocols without modifying them
+   3. Real-time connection to live networks
+        - Hardware-in-the-loop
+        - Distributed with multiple COREs
+   4. Highly customizable
+   5. The emulated machines can use several resources and programs
+      installed on the real machine, as tcpdump.
+ .
+ This package provides the CORE GUI.

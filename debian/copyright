@@ -1,0 +1,117 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: core
+Source: http://cs.itd.nrl.navy.mil/work/core or
+        http://hipserver.mct.phantomworks.org/core/pub-4.6rc6
+
+Files: *
+Copyright: 2005-2013, the Boeing Company,
+           by Jeffrey M. Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
+License: BSD-2-clause
+
+Files: gui/annotations.tcl gui/topogen.tcl
+Copyright: 2007-2008, University of Zagreb, Croatia
+           2007-2013, the Boeing Company
+License: BSD-2-clause
+
+Files: gui/canvas.tcl gui/cfgparse.tcl gui/ipv4.tcl gui/ipv6.tcl gui/wlan.tcl
+Copyright: 2005-2008, University of Zagreb, Croatia
+           2005-2013, the Boeing Company
+License: BSD-2-clause
+
+Files: gui/core.tcl gui/editor.tcl gui/exec.tcl gui/filemgmt.tcl gui/help.tcl
+       gui/initgui.tcl gui/linkcfg.tcl gui/nodecfg.tcl gui/ns2imunes.tcl
+       gui/core-gui.in
+Copyright: 2004-2008, University of Zagreb, Croatia
+           2005-2013, the Boeing Company
+License: BSD-2-clause
+
+Files: gui/gpgui.tcl
+Copyright: 2007, Petra Schilhard
+           2007-2013, the Boeing Company
+License: BSD-2-clause
+
+Files: gui/graph_partitioning.tcl
+Copyright: 2007, Petra Schilhard
+           2007-2013, the Boeing Company
+License: BSD-2-clause
+
+Files: kernel/freebsd/ng_pipe/ng_pipe.c
+Copyright: 2004-2008, University of Zagreb, Croatia
+           2007-2008, FreeBSD Foundation
+License: BSD-2-clause
+
+Files: kernel/freebsd/ng_pipe/ng_pipe.h
+Copyright: 2004, 2007, University of Zagreb, Croatia
+           2007, FreeBSD Foundation
+License: BSD-2-clause
+
+Files: kernel/freebsd/ng_pipe/ng_pipe_freebsd4.c
+Copyright: 1996-1999, Whistle Communications, Inc.
+           2004, University of Zagreb, Croatia
+License: BSD-2-clause
+
+Files: kernel/freebsd/ng_wlan/ng_wlan.c kernel/freebsd/ng_wlan/ng_wlan.h
+Copyright: 2004 Ruslan Ermilov
+           2006-2011, the Boeing Company
+License: BSD-2-clause
+
+Files: kernel/freebsd/vimage/vimage.c
+Copyright: 2002-2004 Marko Zec <zec@fer.hr>
+           2009 University of Zagreb
+           2009 FreeBSD Foundation
+License: BSD-2-clause
+
+Files: kernel/freebsd/vimage/vimage.8
+Copyright: 2002-2003 Marko Zec <zec@fer.hr>
+           2009 University of Zagreb
+           2009 FreeBSD Foundation
+License: BSD-2-clause
+
+Files: scripts/core-daemon-init.d-SUSE
+Copyright: 1995-2005, Kurt Garloff, SUSE / Novell Inc.
+License: LGPL2.1+
+
+Files: debian/*
+Copyright: 2013 Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>,
+                Jeffrey M. Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
+License: BSD-2-clause
+
+License: BSD-2-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE HOLDERS OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+License: LGPL2.1+
+ This library is free software; you can redistribute it and/or modify
+ it under the terms of the GNU Library General Public License as
+ published by the Free Software Foundation; either version 2.1 of the
+ License, or (at your option) any later version.
+ .
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ .
+ On Debian systems, the complete text of the GNU Lesser General Public
+ License (latest version) can be found in `/usr/share/common-licenses/LGPL-2.1'.

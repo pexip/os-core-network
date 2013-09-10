@@ -1,0 +1,5 @@
+?package(core-network-gui):needs="X11" \
+			    title="CORE Network Emulator" \
+			    command="/usr/bin/core-gui" \
+			    section="Applications/Emulators" \
+			    icon="/usr/share/pixmaps/core-gui.xpm"
