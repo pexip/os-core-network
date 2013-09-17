@@ -1,7 +1,8 @@
 Source: core-network
 Section: net
 Priority: optional
-Maintainer: Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>
+Maintainer: Pexip AS <packaging@pexip.com>
+XBCS-Original-Maintainer: Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>
 Uploaders: Jeffrey M. Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
 Build-Depends: debhelper (>= 9),
                automake,
@@ -11,7 +12,7 @@ Build-Depends: debhelper (>= 9),
                gcc (>= 4.8.1-2~),
                help2man,
                imagemagick,
-               iproute2,
+               iproute,
                libev-dev,
                pkg-config,
                python-dev,
@@ -55,7 +56,7 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          bridge-utils,
          ebtables,
-         iproute2,
+         iproute,
          python
 Recommends: quagga
 Suggests: core-network-gui
