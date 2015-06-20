@@ -33,6 +33,7 @@ from core.sdt import Sdt
 from core.misc.ipaddr import MacAddr
 from core.misc.event import EventLoop
 from core.constants import *
+from core.misc.xmlsession import savesessionxml
 
 from core.xen import xenconfig
 
@@ -45,7 +46,7 @@ class Session(object):
     ''' CORE session manager.
     '''
     def __init__(self, sessionid = None, cfg = {}, server = None,
-                 persistent = False):
+                 persistent = False, mkdir = True):
         if sessionid is None:
             # try to keep this short since it's used to construct
             # network interface names
@@ -57,7 +58,8 @@ class Session(object):
         self.sessionid = sessionid
         self.sessiondir = os.path.join(tempfile.gettempdir(),
                                        "pycore.%s" % self.sessionid)
-        os.mkdir(self.sessiondir)
+        if mkdir:
+            os.mkdir(self.sessiondir)
         self.name = None
         self.filename = None
         self.thumbnail = None
@@ -73,11 +75,15 @@ class Session(object):
         self._confobjslock = threading.Lock()
         self._handlers = set()
         self._handlerslock = threading.Lock()
+        self._state = None
         self._hooks = {}
-        self.setstate(state=coreapi.CORE_EVENT_DEFINITION_STATE,
-                      info=False, sendevent=False)
+        self._state_hooks = {}
         # dict of configuration items from /etc/core/core.conf config file
         self.cfg = cfg
+        self.add_state_hook(coreapi.CORE_EVENT_RUNTIME_STATE,
+                            self.runtime_state_hook)
+        self.setstate(state=coreapi.CORE_EVENT_DEFINITION_STATE,
+                      info=False, sendevent=False)
         self.server = server
         if not persistent:
             self.addsession(self)
@@ -119,9 +125,12 @@ class Session(object):
     def shutdown(self):
         ''' Shut down all emulation objects and remove the session directory.
         '''
-        self.emane.shutdown()
-        self.broker.shutdown()
-        self.sdt.shutdown()
+        if hasattr(self, 'emane'):
+            self.emane.shutdown()
+        if hasattr(self, 'broker'):
+            self.broker.shutdown()
+        if hasattr(self, 'sdt'):
+            self.sdt.shutdown()
         self.delobjs()
         preserve = False
         if hasattr(self.options, 'preservedir'):
@@ -197,7 +206,7 @@ class Session(object):
             except Exception, e:
                 self.warn("sendall() error: %s" % e)
         self._handlerslock.release()
-        
+
     def gethandler(self):
         ''' Get one of the connected handlers, preferrably the master.
         '''
@@ -210,26 +219,26 @@ class Session(object):
             for handler in self._handlers:
                 return handler
 
-    def setstate(self, state, info = False, sendevent = False, 
+    def setstate(self, state, info = False, sendevent = False,
                  returnevent = False):
         ''' Set the session state. When info is true, log the state change
             event using the session handler's info method. When sendevent is
             true, generate a CORE API Event Message and send to the connected
             entity.
         '''
+        if state == self._state:
+            return []
         self._time = time.time()
         self._state = state
+        self.run_state_hooks(state)
         replies = []
-
-        if not self.isconnected():
-            return replies
-        if info:
+        if self.isconnected() and info:
             statename = coreapi.state_name(state)
-            self._handlerslock.acquire()
-            for handler in self._handlers:
-                handler.info("SESSION %s STATE %d: %s at %s" % \
-                             (self.sessionid, state, statename, time.ctime()))
-            self._handlerslock.release()
+            with self._handlerslock:
+                for handler in self._handlers:
+                    handler.info("SESSION %s STATE %d: %s at %s" % \
+                                (self.sessionid, state, statename,
+                                 time.ctime()))
         self.writestate(state)
         self.runhook(state)
         if sendevent:
@@ -238,13 +247,14 @@ class Session(object):
                                                  state)
             msg = coreapi.CoreEventMessage.pack(0, tlvdata)
             # send Event Message to connected handlers (e.g. GUI)
-            try:
-                if returnevent:
-                    replies.append(msg)
-                else:
-                    self.broadcastraw(None, msg)
-            except Exception, e:
-                self.warn("Error sending Event Message: %s" % e)
+            if self.isconnected():
+                try:
+                    if returnevent:
+                        replies.append(msg)
+                    else:
+                        self.broadcastraw(None, msg)
+                except Exception, e:
+                    self.warn("Error sending Event Message: %s" % e)
             # also inform slave servers
             tmp = self.broker.handlerawmsg(msg)
         return replies
@@ -254,7 +264,7 @@ class Session(object):
         ''' Retrieve the current state of the session.
         '''
         return self._state
-        
+
     def writestate(self, state):
         ''' Write the current state to a state file in the session dir.
         '''
@@ -285,9 +295,9 @@ class Session(object):
                 check_call(["/bin/sh", filename], cwd=self.sessiondir,
                            env=self.getenviron())
             except Exception, e:
-                self.warn("Error running hook '%s' for state %s: %s" % 
+                self.warn("Error running hook '%s' for state %s: %s" %
                           (filename, state, e))
-            
+
     def sethook(self, type, filename, srcname, data):
         ''' Store a hook from a received File Message.
         '''
@@ -307,12 +317,49 @@ class Session(object):
         # (this allows hooks in the definition and configuration states)
         if self.getstate() == state:
             self.runhook(state, hooks = [hook,])
-    
+
     def delhooks(self):
         ''' Clear the hook scripts dict.
         '''
         self._hooks = {}
-        
+
+    def run_state_hooks(self, state):
+        if state not in self._state_hooks:
+            return
+        for hook in self._state_hooks[state]:
+            try:
+                hook(state)
+            except Exception, e:
+                self.warn("ERROR: exception occured when running %s state "
+                          "hook: %s: %s" % (coreapi.state_name(state),
+                                            hook, e))
+
+    def add_state_hook(self, state, hook):
+        try:
+            hooks = self._state_hooks[state]
+            assert hook not in hooks
+            hooks.append(hook)
+        except KeyError:
+            self._state_hooks[state] = [hook]
+        if self._state == state:
+            hook(state)
+
+    def del_state_hook(self, state, hook):
+        try:
+            hooks = self._state_hooks[state]
+            self._state_hooks[state] = filter(lambda x: x != hook, hooks)
+        except KeyError:
+            pass
+
+    def runtime_state_hook(self, state):
+        if state == coreapi.CORE_EVENT_RUNTIME_STATE:
+            self.emane.poststartup()
+            xmlfilever = self.cfg['xmlfilever']
+            if xmlfilever in ('1.0',):
+                xmlfilename = os.path.join(self.sessiondir,
+                                           'session-deployed.xml')
+                savesessionxml(self, xmlfilename, xmlfilever)
+
     def getenviron(self, state=True):
         ''' Get an environment suitable for a subprocess.Popen call.
             This is the current process environment with some session-specific
@@ -320,6 +367,7 @@ class Session(object):
         '''
         env = os.environ.copy()
         env['SESSION'] = "%s" % self.sessionid
+        env['SESSION_SHORT'] = "%s" % self.shortsessionid()
         env['SESSION_DIR'] = "%s" % self.sessiondir
         env['SESSION_NAME'] = "%s" % self.name
         env['SESSION_FILENAME'] = "%s" % self.filename
@@ -360,14 +408,14 @@ class Session(object):
                 gid = os.stat(self.sessiondir).st_gid
                 os.chown(self.sessiondir, uid, gid)
             except Exception, e:
-                self.warn("Failed to set permission on %s: %s" % (self.sessiondir, e)) 
+                self.warn("Failed to set permission on %s: %s" % (self.sessiondir, e))
         self.user = user
 
     def objs(self):
         ''' Return iterator over the emulation object dictionary.
         '''
         return self._objs.itervalues()
-        
+
     def getobjid(self):
         ''' Return a unique, random object id.
         '''
@@ -398,7 +446,7 @@ class Session(object):
         if objid not in self._objs:
             raise KeyError, "unknown object id %s" % (objid)
         return self._objs[objid]
-        
+
     def objbyname(self, name):
         ''' Get an emulation object using its name attribute.
         '''
@@ -436,7 +484,7 @@ class Session(object):
             k, o = self._objs.popitem()
             o.shutdown()
         self._objslock.release()
-        
+
     def writeobjs(self):
         ''' Write objects to a 'nodes' file in the session dir.
             The 'nodes' file lists:
@@ -522,18 +570,19 @@ class Session(object):
         num = len(self._objs)
         self.info("        file=%s thumb=%s nc=%s/%s" % \
                   (self.filename, self.thumbnail, self.node_count, num))
-                  
+
     def exception(self, level, source, objid, text):
-        ''' Generate an Exception Message 
+        ''' Generate an Exception Message
         '''
         vals = (objid, str(self.sessionid), level, source, time.ctime(), text)
         types = ("NODE", "SESSION", "LEVEL", "SOURCE", "DATE", "TEXT")
         tlvdata = ""
         for (t,v) in zip(types, vals):
-            if v is not None:                
+            if v is not None:
                 tlvdata += coreapi.CoreExceptionTlv.pack(
                                     eval("coreapi.CORE_TLV_EXCP_%s" % t), v)
         msg = coreapi.CoreExceptionMessage.pack(0, tlvdata)
+        self.warn("exception: %s (%s) %s" % (source, objid, text))
         # send Exception Message to connected handlers (e.g. GUI)
         self.broadcastraw(None, msg)
 
@@ -569,6 +618,7 @@ class Session(object):
             of various managers and boot the nodes. Validate nodes and check
             for transition to the runtime state.
         '''
+        
         self.writeobjs()
         # controlnet may be needed by some EMANE models
         self.addremovectrlif(node=None, remove=False)
@@ -581,11 +631,28 @@ class Session(object):
         # allow time for processes to start
         time.sleep(0.125)
         self.validatenodes()
-        self.emane.poststartup()
         # assume either all nodes have booted already, or there are some
         # nodes on slave servers that will be booted and those servers will
         # send a node status response message
         self.checkruntime()
+
+    def getnodecount(self):
+        ''' Returns the number of CoreNodes and CoreNets, except for those
+        that are not considered in the GUI's node count.
+        '''
+
+        with self._objslock:
+            count = len(filter(lambda(x): \
+                               not isinstance(x, (nodes.PtpNet, nodes.CtrlNet)),
+                               self.objs()))
+            # on Linux, GreTapBridges are auto-created, not part of
+            # GUI's node count
+            if 'GreTapBridge' in globals():
+                count -= len(filter(lambda(x): \
+                                    isinstance(x, GreTapBridge) and not \
+                                    isinstance(x, nodes.TunnelNode),
+                                    self.objs()))
+        return count
 
     def checkruntime(self):
         ''' Check if we have entered the runtime state, that all nodes have been
@@ -600,23 +667,10 @@ class Session(object):
         if self.getstate() == coreapi.CORE_EVENT_RUNTIME_STATE:
             return
         session_node_count = int(self.node_count)
-        nc = 0
-        with self._objslock:
-            for obj in self.objs():
-                # these networks may be added by the daemon and are not
-                # considered in the GUI's node count
-                if isinstance(obj, (nodes.PtpNet, nodes.CtrlNet)):
-                    continue
-                # on Linux, GreTapBridges are auto-created, not part of GUI's
-                # node count
-                if 'GreTapBridge' in globals():
-                    if isinstance(obj, GreTapBridge) and \
-                       not isinstance(obj, nodes.TunnelNode):
-                        continue
-                nc += 1
+        nc = self.getnodecount()
         # count booted nodes not emulated on this server
         # TODO: let slave server determine RUNTIME and wait for Event Message
-        # broker.getbootocunt() counts all CoreNodes from status reponse 
+        # broker.getbootocunt() counts all CoreNodes from status reponse
         #  messages, plus any remote WLANs; remote EMANE, hub, switch, etc.
         #  are already counted in self._objs
         nc += self.broker.getbootcount()
@@ -643,21 +697,28 @@ class Session(object):
                     self.services.stopnodeservices(obj)
         self.emane.shutdown()
         self.updatectrlifhosts(remove=True)
+        # Remove all four possible control networks. Does nothing if ctrlnet is not installed.
         self.addremovectrlif(node=None, remove=True)
+        self.addremovectrlif(node=None, netidx=1, remove=True)
+        self.addremovectrlif(node=None, netidx=2, remove=True)
+        self.addremovectrlif(node=None, netidx=3, remove=True)
+
         # self.checkshutdown() is currently invoked from node delete handler
-    
+
     def checkshutdown(self):
         ''' Check if we have entered the shutdown state, when no running nodes
             and links remain.
         '''
-        with self._objslock:
-            nc = len(self._objs)
+        nc = self.getnodecount()
         # TODO: this doesn't consider slave server node counts
         # wait for slave servers to enter SHUTDOWN state, then master session
         # can enter SHUTDOWN
         replies = ()
+        if self.getcfgitembool('verbose', False):
+            self.info("Session %d shutdown: %d nodes remaining" % \
+                      (self.sessionid, nc))
         if nc == 0:
-            replies = self.setstate(state=coreapi.CORE_EVENT_SHUTDOWN_STATE, 
+            replies = self.setstate(state=coreapi.CORE_EVENT_SHUTDOWN_STATE,
                                     info=True, sendevent=True, returnevent=True)
             self.sdt.shutdown()
         return replies
@@ -674,48 +735,50 @@ class Session(object):
                 self.master = h.master
                 return True
         return False
-    
+
     def shortsessionid(self):
         ''' Return a shorter version of the session ID, appropriate for
             interface names, where length may be limited.
         '''
-        return (self.sessionid >> 8) ^ (self.sessionid & ((1 << 8) - 1))
-        
+        ssid = (self.sessionid >> 8) ^ (self.sessionid & ((1 << 8) - 1))
+        return "%x" % ssid
+
+    def sendnodeemuid(self, handler, nodenum):
+        ''' Send back node messages to the GUI for node messages that had
+            the status request flag.
+        '''
+        if handler is None:
+            return
+        if nodenum in handler.nodestatusreq:
+            tlvdata = ""
+            tlvdata += coreapi.CoreNodeTlv.pack(coreapi.CORE_TLV_NODE_NUMBER,
+                                                nodenum)
+            tlvdata += coreapi.CoreNodeTlv.pack(coreapi.CORE_TLV_NODE_EMUID,
+                                                nodenum)
+            reply = coreapi.CoreNodeMessage.pack(coreapi.CORE_API_ADD_FLAG \
+                                               | coreapi.CORE_API_LOC_FLAG,
+                                                 tlvdata)
+            try:
+                handler.request.sendall(reply)
+            except Exception, e:
+                self.warn("sendall() for node: %d error: %s" % (nodenum, e))
+            del handler.nodestatusreq[nodenum]
+
     def bootnodes(self, handler):
-        ''' Invoke the boot() procedure for all nodes and send back node 
+        ''' Invoke the boot() procedure for all nodes and send back node
             messages to the GUI for node messages that had the status
             request flag.
         '''
-        #self.addremovectrlif(node=None, remove=False)
         with self._objslock:
             for n in self.objs():
-                if not isinstance(n, nodes.PyCoreNode):
-                    continue
-                if isinstance(n, nodes.RJ45Node):
-                    continue
-                # add a control interface if configured
-                self.addremovectrlif(node=n, remove=False)
-                n.boot()
-                nodenum = n.objid
-                if handler is None:
-                    continue
-                if nodenum in handler.nodestatusreq:
-                    tlvdata = ""
-                    tlvdata += coreapi.CoreNodeTlv.pack(coreapi.CORE_TLV_NODE_NUMBER,
-                                                        nodenum)
-                    tlvdata += coreapi.CoreNodeTlv.pack(coreapi.CORE_TLV_NODE_EMUID,
-                                                        n.objid)
-                    reply = coreapi.CoreNodeMessage.pack(coreapi.CORE_API_ADD_FLAG \
-                                                       | coreapi.CORE_API_LOC_FLAG,
-                                                         tlvdata)
-                    try:
-                        handler.request.sendall(reply)
-                    except Exception, e:
-                        self.warn("sendall() error: %s" % e)
-                    del handler.nodestatusreq[nodenum]
+                if isinstance(n, nodes.PyCoreNode) and \
+                  not isinstance(n, nodes.RJ45Node):
+                    # add a control interface if configured
+                    self.addremovectrlif(node=n, remove=False)
+                    n.boot()
+                self.sendnodeemuid(handler, n.objid)
         self.updatectrlifhosts()
-    
-    
+
     def validatenodes(self):
         with self._objslock:
             for n in self.objs():
@@ -726,27 +789,61 @@ class Session(object):
                 if isinstance(n, nodes.RJ45Node):
                     continue
                 n.validate()
-                
-    def addremovectrlnet(self, remove=False):
-        ''' Create a control network bridge as necessary. 
+
+    def getctrlnetprefixes(self):
+        p = getattr(self.options, 'controlnet', self.cfg.get('controlnet'))
+        p0 = getattr(self.options, 'controlnet0', self.cfg.get('controlnet0'))
+        p1 = getattr(self.options, 'controlnet1', self.cfg.get('controlnet1'))
+        p2 = getattr(self.options, 'controlnet2', self.cfg.get('controlnet2'))
+        p3 = getattr(self.options, 'controlnet3', self.cfg.get('controlnet3'))
+        if not p0 and p:
+            p0 = p
+        return [p0,p1,p2,p3]
+        
+
+    def getctrlnetserverintf(self):
+        d0 = self.cfg.get('controlnetif0')
+        if d0:
+            self.warn("controlnet0 cannot be assigned with a host interface")
+        d1 = self.cfg.get('controlnetif1')
+        d2 = self.cfg.get('controlnetif2')
+        d3 = self.cfg.get('controlnetif3')
+        return [None,d1,d2,d3]
+    
+    def getctrlnetidx(self, dev):
+        if dev[0:4] == 'ctrl' and int(dev[4]) in [0,1,2,3]:
+            idx = int(dev[4])
+            if idx == 0:
+                return idx
+            if idx < 4 and self.getctrlnetprefixes()[idx] is not None:
+                return idx
+        return -1
+        
+
+    def getctrlnetobj(self, netidx):
+        oid = "ctrl%dnet" % netidx
+        return self.obj(oid)
+    
+
+    def addremovectrlnet(self, netidx, remove=False, conf_reqd=True):
+        ''' Create a control network bridge as necessary.
         When the remove flag is True, remove the bridge that connects control
-        interfaces.
+        interfaces. The conf_reqd flag, when False, causes a control network
+        bridge to be added even if one has not been configured.
         '''
-        prefix = None
-        try:
-            if self.cfg['controlnet']:
-                prefix = self.cfg['controlnet']
-        except KeyError:
-            pass
-        if hasattr(self.options, 'controlnet'):
-            prefix = self.options.controlnet
-        if not prefix:
-            return None # no controlnet needed
-            
+        prefixspeclist = self.getctrlnetprefixes()
+        prefixspec = prefixspeclist[netidx]
+        if not prefixspec:
+            if conf_reqd:
+                return None  # no controlnet needed
+            else:
+                prefixspec = nodes.CtrlNet.DEFAULT_PREFIX_LIST[netidx]
+                
+        serverintf = self.getctrlnetserverintf()[netidx]
+
         # return any existing controlnet bridge
-        id = "ctrlnet"
         try:
-            ctrlnet = self.obj(id)
+            ctrlnet = self.getctrlnetobj(netidx)
             if remove:
                 self.delobj(ctrlnet.objid)
                 return None
@@ -756,29 +853,49 @@ class Session(object):
                 return None
 
         # build a new controlnet bridge
+        oid = "ctrl%dnet" % netidx
+
+        # use the updown script for control net 0 only.
         updown_script = None
-        try:
-            if self.cfg['controlnet_updown_script']:
-                updown_script = self.cfg['controlnet_updown_script']
-        except KeyError:
-            pass
-            
-        prefixes = prefix.split()
-        if len(prefixes) > 1:
+        if netidx == 0:
+            try:
+                if self.cfg['controlnet_updown_script']:
+                    updown_script = self.cfg['controlnet_updown_script']
+            except KeyError:
+                pass
+            # Check if session option set, overwrite if so
+            if hasattr(self.options, 'controlnet_updown_script'):
+                new_uds = self.options.controlnet_updown_script
+            if new_uds:
+                updown_script = new_uds
+                
+
+        prefixes = prefixspec.split()
+        if len(prefixes) > 1: 
+            # A list of per-host prefixes is provided
             assign_address = True
             if self.master:
                 try:
+                    # split first (master) entry into server and prefix
                     prefix = prefixes[0].split(':', 1)[1]
                 except IndexError:
-                    prefix = prefixes[0] # possibly only one server
+                    # no server name. possibly only one server
+                    prefix = prefixes[0] 
             else:
                 # slave servers have their name and localhost in the serverlist
                 servers = self.broker.getserverlist()
                 servers.remove('localhost')
                 prefix = None
                 for server_prefix in prefixes:
-                    server, p = server_prefix.split(':')
+                    try:
+                        # split each entry into server and prefix
+                        server, p = server_prefix.split(':')
+                    except ValueError:
+                        server = ""
+                        p = None
+                        
                     if server == servers[0]:
+                        # the server name in the list matches this server
                         prefix = p
                         break
                 if not prefix:
@@ -786,30 +903,42 @@ class Session(object):
                             servers[0]
                     self.exception(coreapi.CORE_EXCP_LEVEL_ERROR,
                                    "Session.addremovectrlnet()", None, msg)
-                    prefix = prefixes[0].split(':', 1)[1]
                     assign_address = False
-        else:
+                    try:
+                        prefix = prefixes[0].split(':', 1)[1]
+                    except IndexError:
+                        prefix = prefixes[0]
+        else: # len(prefixes) == 1 
+            # TODO: can we get the server name from the servers.conf or from the node assignments?
             # with one prefix, only master gets a ctrlnet address
             assign_address = self.master
-        ctrlnet = self.addobj(cls=nodes.CtrlNet, objid=id, prefix=prefix,
+            prefix = prefixes[0]
+
+        ctrlnet = self.addobj(cls=nodes.CtrlNet, objid=oid, prefix=prefix, 
                               assign_address=assign_address,
-                              updown_script=updown_script)
+                              updown_script=updown_script, serverintf=serverintf)
+
         # tunnels between controlnets will be built with Broker.addnettunnels()
-        self.broker.addnet(id)
+        self.broker.addnet(oid)
         for server in self.broker.getserverlist():
-            self.broker.addnodemap(server, id)
+            self.broker.addnodemap(server, oid)
+        
         return ctrlnet
 
-    def addremovectrlif(self, node, remove=False):
+    def addremovectrlif(self, node, netidx=0,  remove=False, conf_reqd=True):
         ''' Add a control interface to a node when a 'controlnet' prefix is
             listed in the config file or session options. Uses
             addremovectrlnet() to build or remove the control bridge.
+            If conf_reqd is False, the control network may be built even
+            when the user has not configured one (e.g. for EMANE.)
         '''
-        ctrlnet = self.addremovectrlnet(remove)
+        ctrlnet = self.addremovectrlnet(netidx, remove, conf_reqd)
         if ctrlnet is None:
             return
         if node is None:
             return
+        if node.netif(ctrlnet.CTRLIF_IDX_BASE + netidx):
+            return  # ctrl# already exists
         ctrlip = node.objid
         try:
             addrlist = ["%s/%s" % (ctrlnet.prefix.addr(ctrlip),
@@ -821,19 +950,19 @@ class Session(object):
             node.exception(coreapi.CORE_EXCP_LEVEL_ERROR,
                            "Session.addremovectrlif()", msg)
             return
-        ifi = node.newnetif(net = ctrlnet, ifindex = ctrlnet.CTRLIF_IDX_BASE,
-                            ifname = "ctrl0", hwaddr = MacAddr.random(),
+        ifi = node.newnetif(net = ctrlnet, ifindex = ctrlnet.CTRLIF_IDX_BASE + netidx,
+                            ifname = "ctrl%d" % netidx, hwaddr = MacAddr.random(),
                             addrlist = addrlist)
         node.netif(ifi).control = True
 
-    def updatectrlifhosts(self, remove=False):
+    def updatectrlifhosts(self, netidx=0, remove=False):
         ''' Add the IP addresses of control interfaces to the /etc/hosts file.
         '''
         if not self.getcfgitembool('update_etc_hosts', False):
             return
-        id = "ctrlnet"
+        
         try:
-            ctrlnet = self.obj(id)
+            ctrlnet = self.getctrlnetobj(netidx)
         except KeyError:
             return
         header = "CORE session %s host entries" % self.sessionid
@@ -859,7 +988,7 @@ class Session(object):
             return time.time() - self._time
         else:
             return 0.0
-        
+
     def addevent(self, etime, node=None, name=None, data=None):
         ''' Add an event to the event queue, with a start time relative to the
             start of the runtime state.
@@ -891,7 +1020,7 @@ class Session(object):
         else:
             n = self.obj(node)
             n.cmd(shlex.split(data), wait=False)
-            
+
     def sendobjs(self):
         ''' Return API messages that describe the current session.
         '''
@@ -969,7 +1098,7 @@ class Session(object):
                                     typeflags = coreapi.CONF_TYPE_FLAGS_UPDATE)
         if meta:
             replies.append(meta)
-        
+
         self.info("informing GUI about %d nodes and %d links" % (nn, nl))
         return replies
 
@@ -980,21 +1109,25 @@ class SessionConfig(ConfigurableManager, Configurable):
     _type = coreapi.CORE_TLV_REG_UTILITY
     _confmatrix = [
         ("controlnet", coreapi.CONF_DATA_TYPE_STRING, '', '',
-         'Control network'), 
-        ("enablerj45", coreapi.CONF_DATA_TYPE_BOOL, '1', 'On,Off', 
+         'Control network'),
+        ("controlnet_updown_script", coreapi.CONF_DATA_TYPE_STRING, '', '',
+         'Control network script'),
+        ("enablerj45", coreapi.CONF_DATA_TYPE_BOOL, '1', 'On,Off',
          'Enable RJ45s'),
         ("preservedir", coreapi.CONF_DATA_TYPE_BOOL, '0', 'On,Off',
          'Preserve session dir'),
-        ("enablesdt", coreapi.CONF_DATA_TYPE_BOOL, '0', 'On,Off', 
+        ("enablesdt", coreapi.CONF_DATA_TYPE_BOOL, '0', 'On,Off',
          'Enable SDT3D output'),
+        ("sdturl", coreapi.CONF_DATA_TYPE_STRING, Sdt.DEFAULT_SDT_URL, '',
+         'SDT3D URL'),
         ]
     _confgroups = "Options:1-%d" % len(_confmatrix)
-    
+
     def __init__(self, session):
         ConfigurableManager.__init__(self, session)
         session.broker.handlers += (self.handledistributed, )
         self.reset()
-    
+
     def reset(self):
         defaults = self.getdefaultvalues()
         for k in self.getnames():
@@ -1004,9 +1137,9 @@ class SessionConfig(ConfigurableManager, Configurable):
                 v = self.valueof(k, defaults)
                 v = self.offontobool(v)
             setattr(self, k, v)
-        
+
     def configure_values(self, msg, values):
-        return self.configure_values_keyvalues(msg, values, self, 
+        return self.configure_values_keyvalues(msg, values, self,
                                                self.getnames())
 
     def configure_request(self, msg, typeflags = coreapi.CONF_TYPE_FLAGS_NONE):
@@ -1018,7 +1151,7 @@ class SessionConfig(ConfigurableManager, Configurable):
                 v = ""
             values.append("%s" % v)
         return self.toconfmsg(0, nodenum, typeflags, values)
-        
+
     def handledistributed(self, msg):
         ''' Handle the session options config message as it has reached the
         broker. Options requiring modification for distributed operation should
@@ -1039,7 +1172,7 @@ class SessionConfig(ConfigurableManager, Configurable):
             key, value = v.split('=', 1)
             if key == "controlnet":
                 self.handledistributedcontrolnet(msg, values, values.index(v))
-                
+
     def handledistributedcontrolnet(self, msg, values, idx):
         ''' Modify Config Message if multiple control network prefixes are
         defined. Map server names to prefixes and repack the message before
@@ -1050,7 +1183,6 @@ class SessionConfig(ConfigurableManager, Configurable):
         controlnets = value.split()
         if len(controlnets) < 2:
             return # multiple controlnet prefixes do not exist
-            
         servers = self.session.broker.getserverlist()
         if len(servers) < 2:
             return # not distributed
@@ -1084,7 +1216,7 @@ class SessionMetaData(ConfigurableManager):
                 raise ValueError, "invalid key in metdata: %s" % kv
             self.additem(key, value)
         return None
-    
+
     def configure_request(self, msg, typeflags = coreapi.CONF_TYPE_FLAGS_NONE):
         nodenum = msg.gettlv(coreapi.CORE_TLV_CONF_NODE)
         values_str = "|".join(map(lambda(k,v): "%s=%s" % (k,v), self.items()))
@@ -1107,10 +1239,10 @@ class SessionMetaData(ConfigurableManager):
                                             values_str)
         msg = coreapi.CoreConfMessage.pack(flags, tlvdata)
         return msg
-    
+
     def additem(self, key, value):
         self.configs[key] = value
-    
+
     def items(self):
         return self.configs.iteritems()
 

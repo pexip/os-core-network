@@ -13,6 +13,7 @@ from core.constants import *
 from core.api import coreapi
 from coreobj import PyCoreNet, PyCoreObj
 from core.netns import nodes
+from urlparse import urlparse
 import socket
 
 class Sdt(object):
@@ -20,7 +21,7 @@ class Sdt(object):
     The connect() method initializes the display, and can be invoked
     when a node position or link has changed.
     '''
-    DEFAULT_SDT_PORT = 5000
+    DEFAULT_SDT_URL = "tcp://127.0.0.1:50000/"
     # default altitude (in meters) for flyto view
     DEFAULT_ALT = 2500
     # TODO: read in user's nodes.conf here; below are default node types
@@ -32,7 +33,7 @@ class Sdt(object):
                        ('wlan', 'wlan.gif'), ('rj45','rj45.gif'), 
                        ('tunnel','tunnel.gif'),
                        ]
-    
+
     class Bunch:
         ''' Helper class for recording a collection of attributes.
         '''
@@ -44,22 +45,40 @@ class Sdt(object):
         self.sock = None
         self.connected = False
         self.showerror = True
+        self.url = self.DEFAULT_SDT_URL
         self.verbose = self.session.getcfgitembool('verbose', False)
-        self.address = ("127.0.0.1", self.DEFAULT_SDT_PORT)
         # node information for remote nodes not in session._objs
         # local nodes also appear here since their obj may not exist yet
         self.remotes = {}
         session.broker.handlers += (self.handledistributed, )
         
     def is_enabled(self):
+        ''' Check for 'enablesdt' session option. Return False by default if
+            the option is missing.
+        '''
         if not hasattr(self.session.options, 'enablesdt'):
             return False
-        if self.session.options.enablesdt == '1':
+        enabled = self.session.options.enablesdt
+        if enabled in ('1', 'true', 1, True):
             return True
         return False
 
+    def seturl(self):
+        ''' Read 'sdturl' from session options, or use the default value.
+            Set self.url, self.address, self.protocol
+        '''
+        url = None
+        if hasattr(self.session.options,'sdturl'):
+            if self.session.options.sdturl != "":
+                url = self.session.options.sdturl
+        if url is None or url == "":
+            url = self.DEFAULT_SDT_URL
+        self.url = urlparse(url)
+        self.address = (self.url.hostname, self.url.port)
+        self.protocol = self.url.scheme
+
     def connect(self, flags=0):
-        ''' Connect to the SDT UDP port if enabled.
+        ''' Connect to the SDT address/port if enabled.
         '''
         if not self.is_enabled():
             return False
@@ -67,15 +86,24 @@ class Sdt(object):
             return True
         if self.session.getstate() == coreapi.CORE_EVENT_SHUTDOWN_STATE:
             return False
+
+        self.seturl()
         if self.showerror:
-            self.session.info("connecting to SDT at %s:%s" % self.address)
+            self.session.info("connecting to SDT at %s://%s" \
+                                  % (self.protocol, self.address))
         if self.sock is None:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            self.sock.connect(self.address)
-        except Exception, e:
-            self.session.warn("SDT socket connect error: %s" % e)
-            return False
+            try:
+                if (self.protocol.lower() == 'udp'):
+                    self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    self.sock.connect(self.address)
+                else:
+                    # Default to tcp
+                    self.sock = socket.create_connection(self.address, 5)
+            except Exception, e:
+                if self.showerror:
+                    self.session.warn("SDT socket connect error: %s" % e)
+                self.showerror = False
+                return False
         if not self.initialize():
             return False
         self.connected = True
@@ -129,6 +157,7 @@ class Sdt(object):
             if self.showerror:
                 self.session.warn("SDT connection error: %s" % e)
                 self.showerror = False
+            self.sock = None
             self.connected = False
             return False
         
@@ -331,6 +360,6 @@ class Sdt(object):
                 n = self.session.obj(nodenum)
             except KeyError:
                 return False
-            if isinstance(n, (pycore.nodes.WlanNode, pycore.nodes.EmaneNode)):
+            if isinstance(n, (nodes.WlanNode, nodes.EmaneNode)):
                 return True
         return False

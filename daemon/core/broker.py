@@ -17,6 +17,7 @@ import os, socket, select, threading, sys
 from core.api import coreapi
 from core.coreobj import PyCoreNode, PyCoreNet
 from core.emane.nodes import EmaneNet
+from core.netns.nodes import CtrlNet
 from core.phys.pnodes import PhysicalNode
 from core.misc.ipaddr import IPAddr
 from core.conf import ConfigurableManager
@@ -286,7 +287,7 @@ class CoreBroker(ConfigurableManager):
             # this is the master session
             sid = self.session.sessionid
             
-        key = (sid  << 16) | hash(n1num)  | (hash(n2num) << 8)
+        key = (sid  << 16) ^ hash(n1num)  ^ (hash(n2num) << 8)
         return key & 0xFFFFFFFF
     
     def addtunnel(self, remoteip, n1num, n2num, localnum):
@@ -330,6 +331,10 @@ class CoreBroker(ConfigurableManager):
         # add other nets here that do not require tunnels
         if isinstance(net, EmaneNet):
             return None
+        if isinstance(net, CtrlNet):
+            if hasattr(net, 'serverintf'):
+                if net.serverintf is not None:
+                    return None
             
         servers = self.getserversbynode(n)
         if len(servers) < 2:
@@ -832,7 +837,11 @@ class CoreBroker(ConfigurableManager):
                 if name == "localhost":
                     continue
                 (host, port, sock) = self.servers[name]
-                f.write("%s %s %s\n" % (name, host, port))
+                try:
+                    (lhost, lport) = sock.getsockname()
+                except:
+                    lhost, lport = None, None
+                f.write("%s %s %s %s %s\n" % (name, host, port, lhost, lport))
             f.close()
         except Exception, e:
             self.session.warn("Error writing server list to the file: %s\n%s" \

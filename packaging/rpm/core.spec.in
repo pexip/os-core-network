@@ -1,5 +1,6 @@
 %define version @PACKAGE_VERSION@
 %define lib_version @GENERIC_RELEASE@
+%define python_version %(%{__python} -c "import sys; print '%s.%s' % (sys.version_info[0], sys.version_info[1])")%{nil}
 
 %if 0%{?fedora} >= 17
 %define with_kernel_modules_extra 1
@@ -11,9 +12,9 @@ Name:		core
 Summary:	Common Open Research Emulator for use with network namespaces
 License:	BSD
 Prefix:		/usr
-Release:	1
+Release:	1%{?dist}
 Source:		core-%{version}.tar.gz
-URL:		http://cs.itd.nrl.navy.mil/work/core/
+URL:		http://www.nrl.navy.mil/itd/ncs/products/core
 Version:	%{version}
 %description 
 The Common Open Research Emulator provides Python modules and a GUI for
@@ -22,11 +23,21 @@ building virtual networks using Linux network namespace containers and bridging.
 %package daemon
 Summary:	Common Open Research Emulator daemon back-end
 Group:		System Tools
-Requires:	bash bridge-utils ebtables iproute libev python
+Requires:	bash bridge-utils ebtables iproute libev python net-tools
+%if 0%{?el6}
+Requires: procps
+%else
+Requires: procps-ng
+%endif
 %if %{with_kernel_modules_extra}
 Requires: kernel-modules-extra
 %endif
-BuildRequires:  make automake autoconf libev-devel python-devel bridge-utils ebtables ImageMagick help2man 
+BuildRequires:	make automake autoconf libev-devel python-devel bridge-utils ebtables iproute net-tools ImageMagick help2man
+%if 0%{?el6}
+BuildRequires: procps
+%else
+BuildRequires: procps-ng
+%endif
 Provides:	core-daemon
 # python-sphinx
 %description daemon
@@ -36,7 +47,7 @@ networks using Linux network namespace containers and bridging.
 %package gui
 Summary:	Common Open Research Emulator GUI front-end
 Group:		System Tools
-Requires:	tcl tk tkimg
+Requires:	tcl tk
 BuildArch:	noarch
 BuildRequires:  make automake autoconf
 Provides:	core-gui
@@ -54,7 +65,7 @@ virtual network topologies.
 # not using --disable-gui/--disable-daemon, because RPM expects both to be
 # installed by this build process
 # assume Fedora, using systemd startup script
-%configure --with-startup=systemd
+CFLAGS="-fno-strict-aliasing $CFLAGS" %configure --with-startup=systemd
 make -j4
 
 %install
@@ -72,13 +83,15 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 
 %preun
 #if [ "$1" = 0 ]; then
-    #find %{_libdir}/python@PYTHON_VERSION@/site-packages/core -name '*.pyc' -exec rm -f '{}' ';' 2> /dev/null
+    #find %{_libdir}/python%{python_version}/site-packages/core -name '*.pyc' -exec rm -f '{}' ';' 2> /dev/null
 #fi
 
 %postun
 
 %files gui
 %{_bindir}/core-gui
+%dir @CORE_LIB_DIR@
+%dir @CORE_LIB_DIR@/addons
 @CORE_LIB_DIR@/addons/ipsecservice.tcl
 @CORE_LIB_DIR@/annotations.tcl
 @CORE_LIB_DIR@/api.tcl
@@ -96,6 +109,9 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 @CORE_LIB_DIR@/help.tcl
 %{_datadir}/applications/core-gui.desktop
 %{_datadir}/pixmaps/core-gui.xpm
+%dir %{_datadir}/%{name}
+%dir %{_datadir}/%{name}/icons
+%dir %{_datadir}/%{name}/icons/normal
 %{_datadir}/%{name}/icons/normal/antenna.gif
 %{_datadir}/%{name}/icons/normal/ap.gif
 %{_datadir}/%{name}/icons/normal/core-icon.png
@@ -122,6 +138,7 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 %{_datadir}/%{name}/icons/normal/tunnel.gif
 %{_datadir}/%{name}/icons/normal/wlan.gif
 %{_datadir}/%{name}/icons/normal/xen.gif
+%dir %{_datadir}/%{name}/icons/svg
 %{_datadir}/%{name}/icons/svg/ap.svg
 %{_datadir}/%{name}/icons/svg/cel.svg
 %{_datadir}/%{name}/icons/svg/hub.svg
@@ -139,6 +156,7 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 %{_datadir}/%{name}/icons/svg/tunnel.svg
 %{_datadir}/%{name}/icons/svg/vlan.svg
 %{_datadir}/%{name}/icons/svg/xen.svg
+%dir %{_datadir}/%{name}/icons/tiny
 %{_datadir}/%{name}/icons/tiny/ap.gif
 %{_datadir}/%{name}/icons/tiny/arrow.down.gif
 %{_datadir}/%{name}/icons/tiny/arrow.gif
@@ -210,6 +228,8 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 @CORE_LIB_DIR@/widget.tcl
 @CORE_LIB_DIR@/wlanscript.tcl
 @CORE_LIB_DIR@/wlan.tcl
+%dir %{_datadir}/%{name}/examples
+%dir %{_datadir}/%{name}/examples/configs
 %{_datadir}/%{name}/examples/configs/sample10-kitchen-sink.imn
 %{_datadir}/%{name}/examples/configs/sample1-bg.gif
 %{_datadir}/%{name}/examples/configs/sample1.imn
@@ -230,13 +250,17 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 %config @CORE_CONF_DIR@/core.conf
 %config @CORE_CONF_DIR@/perflogserver.conf
 %config @CORE_CONF_DIR@/xen.conf
+%dir %{_datadir}/%{name}
+%dir %{_datadir}/%{name}/examples
 %{_datadir}/%{name}/examples/controlnet_updown
+%dir %{_datadir}/%{name}/examples/corens3
 %{_datadir}/%{name}/examples/corens3/ns3lte.py*
 %{_datadir}/%{name}/examples/corens3/ns3wifi.py*
 %{_datadir}/%{name}/examples/corens3/ns3wifirandomwalk.py*
 %{_datadir}/%{name}/examples/corens3/ns3wimax.py*
 %{_datadir}/%{name}/examples/emanemodel2core.py*
 %{_datadir}/%{name}/examples/findcore.py*
+%dir %{_datadir}/%{name}/examples/hooks
 %{_datadir}/%{name}/examples/hooks/configuration_hook.sh
 %{_datadir}/%{name}/examples/hooks/datacollect_hook.sh
 %{_datadir}/%{name}/examples/hooks/perflogserver.py*
@@ -245,9 +269,11 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 %{_datadir}/%{name}/examples/hooks/sessiondatacollect.sh
 %{_datadir}/%{name}/examples/hooks/timesyncstart.sh
 %{_datadir}/%{name}/examples/hooks/timesyncstop.sh
+%dir %{_datadir}/%{name}/examples/myservices
 %{_datadir}/%{name}/examples/myservices/__init__.py*
 %{_datadir}/%{name}/examples/myservices/README.txt
 %{_datadir}/%{name}/examples/myservices/sample.py*
+%dir %{_datadir}/%{name}/examples/netns
 %{_datadir}/%{name}/examples/netns/basicrange.py*
 %{_datadir}/%{name}/examples/netns/distributed.py*
 %{_datadir}/%{name}/examples/netns/emane80211.py*
@@ -260,6 +286,7 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 %{_datadir}/%{name}/examples/netns/twonodes.sh
 %{_datadir}/%{name}/examples/netns/wlanemanetests.py*
 %{_datadir}/%{name}/examples/netns/wlantest.py*
+%dir %{_datadir}/%{name}/examples/services
 %{_datadir}/%{name}/examples/services/sampleFirewall
 %{_datadir}/%{name}/examples/services/sampleIPsec
 %{_datadir}/%{name}/examples/services/sampleVPNClient
@@ -267,13 +294,14 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 %{_datadir}/%{name}/examples/stopsession.py*
 %doc  %{_mandir}/man1/core-cleanup.1.gz
 %doc  %{_mandir}/man1/core-daemon.1.gz
+%doc  %{_mandir}/man1/core-manage.1.gz
 %doc  %{_mandir}/man1/coresendmsg.1.gz
 %doc  %{_mandir}/man1/core-xen-cleanup.1.gz
 %doc  %{_mandir}/man1/netns.1.gz
 %doc  %{_mandir}/man1/vcmd.1.gz
 %doc  %{_mandir}/man1/vnoded.1.gz
 /etc/systemd/system/core-daemon.service
-%{python_sitearch}/core_python_netns-1.0-py@PYTHON_VERSION@.egg-info
+%{python_sitearch}/core_python_netns-1.0-py%{python_version}.egg-info
 %{python_sitearch}/netns.so
 %{python_sitearch}/vcmd.so
 %{python_sitelib}/core/addons/__init__.py*
@@ -306,7 +334,15 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 %{python_sitelib}/core/misc/quagga.py*
 %{python_sitelib}/core/misc/utils.py*
 %{python_sitelib}/core/misc/utm.py*
+%{python_sitelib}/core/misc/xmldeployment.py*
+%{python_sitelib}/core/misc/xmlparser.py*
+%{python_sitelib}/core/misc/xmlparser0.py*
+%{python_sitelib}/core/misc/xmlparser1.py*
+%{python_sitelib}/core/misc/xmlsession.py*
 %{python_sitelib}/core/misc/xmlutils.py*
+%{python_sitelib}/core/misc/xmlwriter.py*
+%{python_sitelib}/core/misc/xmlwriter0.py*
+%{python_sitelib}/core/misc/xmlwriter1.py*
 %{python_sitelib}/core/mobility.py*
 %{python_sitelib}/core/netns/__init__.py*
 %{python_sitelib}/core/netns/nodes.py*
@@ -317,15 +353,16 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 %{python_sitelib}/corens3/constants.py*
 %{python_sitelib}/corens3/__init__.py*
 %{python_sitelib}/corens3/obj.py*
-%{python_sitelib}/corens3_python-@COREDPY_VERSION@-py@PYTHON_VERSION@.egg-info
+%{python_sitelib}/corens3_python-@COREDPY_VERSION@-py%{python_version}.egg-info
 %{python_sitelib}/core/phys/__init__.py*
 %{python_sitelib}/core/phys/pnodes.py*
 %{python_sitelib}/core/pycore.py*
-%{python_sitelib}/core_python-@COREDPY_VERSION@-py@PYTHON_VERSION@.egg-info
+%{python_sitelib}/core_python-@COREDPY_VERSION@-py%{python_version}.egg-info
 %{python_sitelib}/core/sdt.py*
 %{python_sitelib}/core/service.py*
 %{python_sitelib}/core/services/bird.py*
 %{python_sitelib}/core/services/__init__.py*
+%{python_sitelib}/core/services/dockersvc.py*
 %{python_sitelib}/core/services/nrl.py*
 %{python_sitelib}/core/services/quagga.py*
 %{python_sitelib}/core/services/security.py*
@@ -338,6 +375,7 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 %{python_sitelib}/core/xen/xen.py*
 %{_sbindir}/core-cleanup
 %{_sbindir}/core-daemon
+%{_sbindir}/core-manage
 %{_sbindir}/coresendmsg
 %{_sbindir}/core-xen-cleanup
 %{_sbindir}/netns
@@ -345,6 +383,10 @@ sed -i 's/emane_realtime = True/emane_realtime = False/' /etc/core/core.conf
 %{_sbindir}/vnoded
 
 %changelog
+* Thu Jun 5 2015 CORE Developers <core-dev@pf.itd.nrl.navy.mil> - 4.8
+- Support for NRL Network Modeling Framework (NMF) XML representation, bugfixes
+* Wed Aug 6 2014 Jeff Ahrenholz <core-dev@pf.itd.nrl.navy.mil> - 4.7
+- EMANE 0.9.1, asymmetric links, bugfixes
 * Thu Aug 22 2013 Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com> - 4.6
 - cored now core-daemon, core now core-gui for CORE 4.6 release
 * Wed Apr 3 2013 Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com> - 4.5

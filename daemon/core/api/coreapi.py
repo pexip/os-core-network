@@ -1,6 +1,6 @@
 #
 # CORE
-# Copyright (c)2010-2012 the Boeing Company.
+# Copyright (c)2010-2013 the Boeing Company.
 # See the LICENSE file included in this distribution.
 #
 # authors: Tom Goff <thomas.goff@boeing.com>
@@ -149,7 +149,7 @@ class CoreTlvDataMacAddr(CoreTlvDataObj):
 
     @staticmethod
     def getvalue(obj):
-        return obj.addr
+        return '\0\0' + obj.addr # extend to 64 bits
 
     @staticmethod
     def newobj(value):
@@ -248,13 +248,14 @@ class CoreLinkTlv(CoreTlv):
         CORE_TLV_LINK_BW: CoreTlvDataUint64,
         CORE_TLV_LINK_PER: CoreTlvDataString,
         CORE_TLV_LINK_DUP: CoreTlvDataString,
-        CORE_TLV_LINK_JITTER: CoreTlvDataUint32,
+        CORE_TLV_LINK_JITTER: CoreTlvDataUint64,
         CORE_TLV_LINK_MER: CoreTlvDataUint16,
         CORE_TLV_LINK_BURST: CoreTlvDataUint16,
         CORE_TLV_LINK_SESSION: CoreTlvDataString,
         CORE_TLV_LINK_MBURST: CoreTlvDataUint16,
         CORE_TLV_LINK_TYPE: CoreTlvDataUint32,
         CORE_TLV_LINK_GUIATTR: CoreTlvDataString,
+        CORE_TLV_LINK_UNI: CoreTlvDataUint16,
         CORE_TLV_LINK_EMUID: CoreTlvDataUint32,
         CORE_TLV_LINK_NETID: CoreTlvDataUint32,
         CORE_TLV_LINK_KEY: CoreTlvDataUint32,

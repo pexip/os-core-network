@@ -1,10 +1,53 @@
 core-network for Debian
 ------------------------
 
-You can get a detailed manual (PDF/HTML) about CORE
-(core-network) at http://cs.itd.nrl.navy.mil/work/core.
+Summary
+-------
 
-CORE can also work with SDT3D. More details at
-https://code.google.com/p/coreemu/wiki/SDT3D.
+1. Extra documentation
+2. Using Physical Interface Tool and other advanced communication tools
 
- -- Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>  Wed, 28 Aug 2013 17:32:30 -0300
+
+1. Extra documentation
+   -------------------
+
+You can get a detailed manual (PDF/HTML) about CORE (core-network) here[1] or
+only HTML here[2].
+
+  [1] http://www.nrl.navy.mil/itd/ncs/products/core
+  [2] http://downloads.pf.itd.nrl.navy.mil/docs/core/core-html
+
+The CORE wiki is here[3].
+
+  [3] https://code.google.com/p/coreemu/wiki/Home
+
+Try this too[4].
+
+  [4] https://code.google.com/p/coreemu/w/list
+
+CORE can also work with SDT3D. SDT3D is a three-dimensional virtual globe GUI
+developed by NRL, based on NASA's WorldWind Java SDK. See more details here[5].
+
+  [5] https://code.google.com/p/coreemu/wiki/SDT3D.
+
+EMANE is another available resource. EMANE is a mobile ad-hoc network emulation
+system that can be used in conjunction with CORE to provide more complex
+wireless radio models. See here[6].
+
+  [6] https://code.google.com/p/coreemu/wiki/EMANE
+
+Other resources, as mailing list, are available here[7].
+
+  [7] https://code.google.com/p/coreemu
+
+
+2. Using Physical Interface Tool and other advanced communication tools
+   --------------------------------------------------------------------
+
+To use special resources that depends of privileged commands as /sbin/ifconfig,
+you need start CORE as root. So, you can use GKSU or a similar command.
+
+  # apt-get install gksu
+  $ gksu core-gui
+
+ -- Joao Eriberto Mota Filho <eriberto@debian.org>  Sun, 21 Jun 2014 09:49:30 -0300

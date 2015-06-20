@@ -1,5 +1,5 @@
 #
-# Copyright 2005-2013 the Boeing Company.
+# Copyright 2005-2014 the Boeing Company.
 # See the LICENSE file included in this distribution.
 #
 
@@ -52,8 +52,8 @@
 # newFile 
 #   - creates an empty project
 #
-# openFile
-#   - loads configuration from currentFile   
+# openFile {filename}
+#   - loads configuration from filename
 #
 # saveFile {selectedFile} 
 #   - saves current configuration to a file named selectedFile 
@@ -138,31 +138,57 @@ proc newFile {} {
 # NAME
 #   openFile -- open file
 # SYNOPSIS
-#   openFile
+#   openFile $filename
 # FUNCTION
-#   Loads the configuration from the file named currentFile.
+#   Loads the configuration from the file named $filename.
 #****
-proc openFile {} {
+proc openFile { filename } {
     global currentFile 
     global undolog activetool
     global canvas_list curcanvas systype
     global changed
-    
-    if { [file extension $currentFile] == ".py" } {
-	set flags 0x10 ;# status request flag
-	sendRegMessage -1 $flags [list "exec" $currentFile]
-	addFileToMrulist $currentFile
+    global oper_mode
+
+    set prev_oper_mode $oper_mode
+    if { [popupStopSessionPrompt] == "cancel" } {
 	return
     }
+
+    if { [lindex [file extension $filename] 0] == ".py" } {
+	execPythonFile $filename
+    	return
+    }
+
+    # disconnect and get a new session number
+    set name [lindex [getEmulPlugin "*"] 0]
+    if { $name != "" } {
+	pluginConnect $name disconnect 1
+	pluginConnect $name connect 1
+    }
+
+    set currentFile $filename
+
+    setGuiTitle ""
+    cleanupGUIState
+    resetGlobalVars openfile
+    if { $canvas_list == "" } {
+	set curcanvas [newCanvas ""]
+    }
+
+    if { $prev_oper_mode == "exec" } {
+     	if { $oper_mode == "exec" } {
+     	    global g_current_session
+     	    setOperMode edit
+     	    set g_current_session 0
+     	}
+    }
+
     if { [file extension $currentFile] == ".xml" } {
-	setGuiTitle ""
-	cleanupGUIState
-	resetGlobalVars openfile
 	xmlFileLoadSave "open" $currentFile
 	addFileToMrulist $currentFile
 	return
     }
-    set fileName [file tail $currentFile]
+
     # flush daemon configuration
     if { [llength [findWlanNodes ""]] > 0 } {
 	if { [lindex $systype 0] == "FreeBSD" } {
@@ -180,12 +206,9 @@ proc openFile {} {
 	return
     }
     close $fileId
-    setGuiTitle ""
+
     loadCfg $cfg
-    set curcanvas [lindex $canvas_list 0]
     switchCanvas none
-    # already called from switchCanvas: redrawAll
-    resetGlobalVars openfile
     set undolog(0) $cfg 
     set activetool select
 
@@ -227,6 +250,11 @@ proc saveFile { selectedFile } {
     set fileName [file tail $currentFile]
     if { [file extension $selectedFile] == ".xml" } {
 	xmlFileLoadSave save $selectedFile
+    } elseif { [file extension $selectedFile] == ".py" } {
+	set msg "Python script files cannot be saved by the GUI."
+	set msg "$msg\nUse File > Export Python script... for export."
+	tk_messageBox -type ok -icon warning -message $msg -title "Error"
+
     } else {
 	set fileId [open $currentFile w]
 	dumpCfg file $fileId
@@ -252,14 +280,11 @@ proc saveFile { selectedFile } {
 #****
 proc fileOpenStartUp {} {
     global argv
-    global currentFile
 
     # Boeing
     foreach arg $argv {
-	if { $arg != "" && $arg != "--start -s" && $arg != "--start" && \
-    		$arg != "--batch -b" && $arg != "--batch" } {
-	    set currentFile [argAbsPathname $arg]
-	    openFile
+	if { $arg != "" && $arg != "--start" && $arg != "--batch" } {
+	    openFile [argAbsPathname $arg]
 	    break
 	}
     }
@@ -302,7 +327,7 @@ proc fileNewDialogBox {} {
 #****
 set fileDialogBox_initial 0; # static flag
 proc fileOpenDialogBox {} {
-    global currentFile fileTypes g_prefs fileDialogBox_initial
+    global fileTypes g_prefs fileDialogBox_initial
 
     # use default conf file path upon first run
     if { $fileDialogBox_initial == 0} {
@@ -314,8 +339,7 @@ proc fileOpenDialogBox {} {
         set selectedFile [tk_getOpenFile -filetypes $fileTypes]
     }
     if { $selectedFile != ""} {
-	set currentFile $selectedFile
-	openFile
+	openFile $selectedFile
     }
 }
 
@@ -461,18 +485,15 @@ proc savePrefsFile { } {
 }
 
 # helper for most-recently-used file list menu items
-proc mrufile { f } {
-    global currentFile
-    set currentFile $f
-    openFile
+proc mrufile { f args } {
+    openFile [string trim "$f $args"]
 }
 
 # add filename to the most-recently-used file list
 # if it exists already, remove it from the list, add to the front; also limit
 # the length of this list; if no file specified, erase the list
 proc addFileToMrulist { f } {
-    global g_mrulist g_prefs
-    set MRUI 13 ;# index of MRU list -- update when adding to File menu!
+    global g_mrulist g_prefs g_mru_index
 
     set oldlength [llength $g_mrulist]
     set maxlength $g_prefs(num_recent)
@@ -485,7 +506,7 @@ proc addFileToMrulist { f } {
     # clear the MRU list menu
     if { $oldlength > 0 } {
 	set end_of_menu [.menubar.file index end]
-	.menubar.file delete $MRUI [expr {$end_of_menu - 2}]
+	.menubar.file delete $g_mru_index [expr {$end_of_menu - 2}]
     }
     if { $f == "" } { ;# used to reset MRU list
 	set g_mrulist {}
@@ -495,7 +516,7 @@ proc addFileToMrulist { f } {
     set g_mrulist [linsert $g_mrulist 0 "$f"]
     set g_mrulist [lrange $g_mrulist 0 [expr {$maxlength - 1}]]
 
-    set i $MRUI
+    set i $g_mru_index
     foreach f $g_mrulist {
     	.menubar.file insert $i command -label "$f" -command "mrufile $f"
 	incr i 1

@@ -1,3 +1,107 @@
+core-network (4.8-1) unstable; urgency=medium
+
+  * New upstream release.
+  * debian/copyright:
+      - Updated the upstream copyright years.
+      - Updated the LGPL-2.1 license text.
+  * debian/patches/:
+      - fix-bashisms: added to fix some bashisms. Thanks to
+        Raphael Geissert <atomo64@gmail.com> (Closes: #772214)
+      - widget.tcl: removed. The upstream fixed the source code.
+  * debian/README.Debian: added new useful information.
+
+ -- Joao Eriberto Mota Filho <eriberto@debian.org>  Sat, 20 Jun 2015 19:12:46 -0300
+
+core-network (4.7-4) unstable; urgency=medium
+
+  * Upload to unstable. Welcome Jessie Stable!
+  * Using dh-autoreconf.
+  * debian/copyright: updated and fixed the packaging copyright years.
+
+ -- Joao Eriberto Mota Filho <eriberto@debian.org>  Wed, 29 Apr 2015 13:37:23 -0300
+
+core-network (4.7-3) experimental; urgency=medium
+
+  * New upstream email address.
+
+ -- Joao Eriberto Mota Filho <eriberto@debian.org>  Mon, 10 Nov 2014 20:37:30 -0200
+
+core-network (4.7-2) unstable; urgency=medium
+
+  * Bumped Standards-Version to 3.9.6.
+  * Updated the upstream homepage in some files.
+  * debian/changelog: changed LGPL2.1+ to LGPL-2.1+.
+  * debian/control: added dh-python as build dependency.
+  * debian/rules: added the DEB_CFLAGS_MAINT_APPEND and
+      DEB_LDFLAGS_MAINT_APPEND variables to fix some
+      issues pointed by blhc.
+
+ -- Joao Eriberto Mota Filho <eriberto@debian.org>  Sun, 26 Oct 2014 17:42:03 -0200
+
+core-network (4.7-1) unstable; urgency=medium
+
+  * New upstream release (Closes: 753544).
+  * New maintainer email address.
+  * Migrated from python-support to dh_python2.
+  * debian/control:
+      - Changed the Architecture from 'any' to 'all' in
+        core-network-gui binary.
+      - Updated the Vcs-Browser field.
+  * debian/copyright:
+      - Updated the 'Source' field.
+      - Updated the upstream and packaging copyright years.
+  * debian/core-network-daemon.install:
+      - Added core-manage.1 (core-[cdmx]*).
+      - Added emanemodel2core.py ([efhmns]*).
+  * debian/patches/widget.tcl: added to fix Throughput Widget and plots
+    feature.
+  * debian/watch: added a secondary test line.
+
+ -- Joao Eriberto Mota Filho <eriberto@debian.org>  Sat, 09 Aug 2014 22:05:55 -0300
+
+core-network (4.6-5) unstable; urgency=medium
+
+  * debian/control: added 'net-tools|freebsd-net-tools' to Build-Depends field.
+
+ -- Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>  Mon, 14 Apr 2014 11:23:38 -0300
+
+core-network (4.6-4) unstable; urgency=medium
+
+  * debian/control:
+      - Added iproute as an alternative to iproute2 dependency in Build-Depends
+        and core-network-daemon binary to avoid problems with wheezy-backports.
+      - core-network-gui binary modifications:
+          - Added tshark and wireshark to Suggests field.
+          - Changed tcpdump from Suggests to Recommends field.
+
+ -- Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>  Tue, 08 Apr 2014 13:45:09 -0300
+
+core-network (4.6-3) unstable; urgency=medium
+
+  * debian/control:
+      - Added procps as Build-Depends.
+      - Bumped Standards-Version from 3.9.4 to 3.9.5.
+  * debian/copyright: updated the packaging copyright years.
+  * debian/watch: improved.
+
+ -- Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>  Mon, 07 Apr 2014 17:45:57 -0300
+
+core-network (4.6-2) unstable; urgency=low
+
+  * debian/control: changed dependency from tk to tk8.5, in core-network-gui
+    binary, to keep compatibility with current upstream version. Thanks a lot
+    to Sergei Golovan. (Closes: #725764)
+  * debian/watch: removed useless comments.
+
+ -- Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>  Thu, 10 Oct 2013 11:07:40 -0300
+
+core-network (4.6-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/watch: updated.
+
+ -- Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>  Thu, 26 Sep 2013 21:21:53 -0300
+
 core-network (4.6~rc6-1) unstable; urgency=low
 
   * New upstream release.
