@@ -107,7 +107,11 @@ proc checkRJ45s {} {
     global systype node_list g_prefs
 
     if { [lindex $systype 0] == "Linux" } {
-        set extifcs [nexec localnode /sbin/ifconfig -a -s | tail -n +2 | awk "{ print \$1 }" | xargs]
+	if { [file isdirectory /sys/class/net] } {
+	    set extifcs [nexec localnode ls /sys/class/net]
+	} else {
+	    set extifcs [nexec localnode /sbin/ifconfig -a -s | tail -n +2 | awk "{ print \$1 }" | xargs]
+	}
         set extifcs \
            [lreplace $extifcs [lsearch $extifcs lo] [lsearch $extifcs lo]]
     } else {
@@ -345,7 +349,7 @@ proc startStopButton { mode } {
 # INPUTS
 #   * mode -- the new operating mode. Can be edit or exec.
 #****
-proc setOperMode { mode } {
+proc setOperMode { mode { type "" } } {
     global oper_mode activetool
     global undolevel redolevel
     global g_prefs
@@ -399,7 +403,9 @@ proc setOperMode { mode } {
 	monitor_loop
         set plugin [lindex [getEmulPlugin "*"] 0]
         set emul_sock [pluginConnect $plugin connect false]
-	deployCfgAPI $emul_sock
+	if {$type != "connect"} {
+	    deployCfgAPI $emul_sock
+	}
 	widget_loop
 	mobility_script_loop
     ### stop button is pressed
@@ -497,7 +503,9 @@ proc monitor_loop {} {
 		set cpuusageforserver [lindex $cpuusage 0]
 	    } else {
 		set server [lindex $assigned_servers $i]
-		set ip [lindex $exec_servers($server) 0]
+                set srv [array get exec_servers $server]
+                if { $srv == "" } { continue }
+                set ip [lindex $srv 0]
 		# TODO: receive CPU usage from other servers
 		set cpuusageforserver 0
 	    }
@@ -763,7 +771,9 @@ proc manageCPUwindow {xpos ypos start} {
 		    set ip [getMyIP]
 		} else {
 		    set server [lindex $assigned_servers $i]
-		    set ip [lindex $exec_servers($server) 0]
+		    set srv [array get exec_servers $server]
+		    if { $srv == "" } { continue }
+		    set ip [lindex $srv 0]
 		}	
 		set server_cpuusage($ip) [lreplace $server_cpuusage($ip) 0 end]
 	    }
@@ -809,7 +819,9 @@ proc plotCPUusage { } {
 	    set ip [getMyIP]
 	} else {
 	    set server [lindex $assigned_servers $i]
-	    set ip [lindex $exec_servers($server) 0]
+            set srv [array get exec_servers $server]
+            if { $srv == "" } { continue }
+            set ip [lindex $srv 0]
 	}
 		
 	#need to add multiple cpuusgaehistory (array)

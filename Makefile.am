@@ -24,6 +24,7 @@ ACLOCAL_AMFLAGS 	= -I config
 
 # extra files to include with distribution tarball
 EXTRA_DIST		= bootstrap.sh LICENSE README-Xen Changelog kernel \
+			  python-prefix.py \
 			  packaging/bsd \
 			  packaging/deb/compat \
 			  packaging/deb/copyright \
@@ -48,9 +49,9 @@ dist-hook:
 
 # build a source RPM using Fedora ~/rpmbuild dirs
 .PHONY: rpm
-rpm:
+rpm: dist
 	rpmdev-setuptree
-	cp -afv core-*.tar.gz ~/rpmbuild/SOURCES
+	cp -afv core-@CORE_VERSION@.tar.gz ~/rpmbuild/SOURCES
 	cp -afv packaging/rpm/core.spec ~/rpmbuild/SPECS
 	rpmbuild -bs ~/rpmbuild/SPECS/core.spec
 
@@ -60,7 +61,7 @@ deb:
 	rm -rf debian
 	mkdir -p debian
 	cp -vf packaging/deb/* debian/
-	@echo "First create source archive with:  dpkg-source -b core-4.5"
+	@echo "First create source archive with:  dpkg-source -b core-@CORE_VERSION@"
 	@echo "Then build with:  pbuilder-dist precise i386 build core*.dsc"
 
 .PHONY: core-restart

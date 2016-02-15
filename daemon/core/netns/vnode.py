@@ -55,9 +55,12 @@ class SimpleLxcNode(PyCoreNode):
                   "-p", self.ctrlchnlname + ".pid"]
         if self.nodedir:
             vnoded += ["-C", self.nodedir]
+        env = self.session.getenviron(state=False)
+        env['NODE_NUMBER'] = str(self.objid)
+        env['NODE_NAME'] = str(self.name)
+
         try:
-            tmp = subprocess.Popen(vnoded, stdout = subprocess.PIPE,
-                                   env = self.session.getenviron(state=False))
+            tmp = subprocess.Popen(vnoded, stdout = subprocess.PIPE, env = env)
         except OSError, e:
             msg = "error running vnoded command: %s (%s)" % (vnoded, e)
             self.exception(coreapi.CORE_EXCP_LEVEL_FATAL,
@@ -164,8 +167,17 @@ class SimpleLxcNode(PyCoreNode):
             if ifname is None:
                 ifname = "eth%d" % ifindex
             sessionid = self.session.shortsessionid()
-            name = "n%s.%s.%s" % (self.objid, ifindex, sessionid)
-            localname = "n%s.%s.%s" % (self.objid, ifname, sessionid)
+            try:
+                suffix = '%x.%s.%s' % (self.objid, ifindex, sessionid)
+            except TypeError:
+                suffix = '%s.%s.%s' % (self.objid, ifindex, sessionid)
+            localname = 'veth' + suffix
+            if len(localname) >= 16:
+                raise ValueError, "interface local name '%s' too long" % \
+                        localname
+            name = localname + 'p'
+            if len(name) >= 16:
+                raise ValueError, "interface name '%s' too long" % name
             ifclass = VEth
             veth = ifclass(node = self, name = name, localname = localname,
                            mtu = 1500, net = net, start = self.up)
@@ -192,7 +204,7 @@ class SimpleLxcNode(PyCoreNode):
             if ifname is None:
                 ifname = "eth%d" % ifindex
             sessionid = self.session.shortsessionid()
-            localname = "n%s.%s.%s" % (self.objid, ifindex, sessionid)
+            localname = "tap%s.%s.%s" % (self.objid, ifindex, sessionid)
             name = ifname
             ifclass = TunTap
             tuntap = ifclass(node = self, name = name, localname = localname,

@@ -29,6 +29,19 @@ CORE is typically used for network and protocol research,
 demonstrations, application and platform testing, evaluating networking
 scenarios, security studies, and increasing the size of physical test networks.
 
+What's New?
+=================
+For readers who are already familiar with CORE and have read this manual before, below is a list of what changed in version 4.8:
+
+* :ref:`Configuration_Files` - a new XML format has been defined by the U.S. Naval Research Lab (NRL) for the Network Management Framework. . 
+
+* :ref:`EMANE` - `Release 0.9.2 of EMANE <https://github.com/adjacentlink/emane/wiki/Release-Notes#092>`_ included a new capability that, in order to be leveraged, needs changes on how it is deployed by CORE. The EMANE section of this document has been updated with new method of connecting together the deployed instances. 
+* :ref:`Control_Network` - with EMANE 0.9.2, the CORE control network has become an important component of CORE. Auxiliary control networks have been added to the primary control network to host EMANE traffic. As a result, the discussion on the control network has been elevated to a top level topic.  
+* `Tips, Hints, Important Information` - miscellaneous information added to several chapters in the document.
+
+
+
+
 .. index::
    single: CORE; components of
    single: CORE; API
@@ -68,6 +81,7 @@ machines.
 .. figure:: figures/core-architecture.*
    :alt: CORE architecture diagram
    :align: center
+   :scale: 75 %
 
    CORE Architecture
 
@@ -224,7 +238,7 @@ contributing to CORE, please visit the
 
 Besides this manual, there are other additional resources available online:
 
-* `CORE website <http://cs.itd.nrl.navy.mil/work/core/>`_ - main project page containing demos, downloads, and mailing list information.
+* `CORE website <http://www.nrl.navy.mil/itd/ncs/products/core>`_ - main project page containing demos, downloads, and mailing list information.
 * `CORE supplemental website <http://code.google.com/p/coreemu/>`_ - supplemental Google Code page with a quickstart guide, wiki, bug tracker, and screenshots.
 
 .. index::
@@ -239,7 +253,7 @@ These are the Goals of the CORE project; they are similar to what we consider to
 
 #. Ease of use - In a few clicks the user should have a running network.
 #. Efficiency and scalability - A node is more lightweight than a full virtual machine. Tens of nodes should be possible on a standard laptop computer.
-#. Real software - Run real implementation code, protocols, networking stacks.
+#. Software re-use - Re-use real implementation code, protocols, networking stacks.
 #. Networking - CORE is focused on emulating networks and offers various ways to connect the running emulation with real or simulated networks.
 #. Hackable - The source code is available and easy to understand and modify.
 

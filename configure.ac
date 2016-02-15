@@ -12,10 +12,10 @@
 #
 # this defines the CORE version number, must be static for AC_INIT
 #
-AC_INIT(core, 4.6rc6, core-dev@pf.itd.nrl.navy.mil)
+AC_INIT(core, 4.8, core-dev@pf.itd.nrl.navy.mil)
 VERSION=$PACKAGE_VERSION
 CORE_VERSION=$PACKAGE_VERSION
-CORE_VERSION_DATE=20130910
+CORE_VERSION_DATE=20150605
 COREDPY_VERSION=$PACKAGE_VERSION
 
 #
@@ -41,8 +41,17 @@ AC_SUBST(COREDPY_VERSION)
 if test "x$prefix" = "xNONE" ; then
   prefix="/usr/local"
 fi
+if test "x$exec_prefix" = "xNONE" ; then
+  exec_prefix="$prefix"
+fi
 if test "$libdir" = "\${exec_prefix}/lib" ; then
-  libdir="${prefix}/lib"
+  libdir="${exec_prefix}/lib"
+fi
+if test "$sbindir" = "\${exec_prefix}/sbin" ; then
+  sbindir="${exec_prefix}/sbin"
+fi
+if test "$bindir" = "\${exec_prefix}/bin" ; then
+  bindir="${exec_prefix}/bin"
 fi
 # this can be /usr/lib or /usr/lib64
 LIB_DIR="${libdir}"
@@ -50,9 +59,9 @@ LIB_DIR="${libdir}"
 CORE_LIB_DIR="${prefix}/lib/core"
 AC_SUBST(LIB_DIR)
 AC_SUBST(CORE_LIB_DIR)
-SBINDIR="${prefix}/sbin"
+SBINDIR="${sbindir}"
 AC_SUBST(SBINDIR)
-BINDIR="${prefix}/bin"
+BINDIR="${bindir}"
 AC_SUBST(BINDIR)
 
 # CORE daemon configuration file (core.conf) in CORE_CONF_DIR
@@ -215,27 +224,34 @@ if test "x$want_python" = "xno"; then
 fi
 
 if test "x$want_python" = "xyes"; then
-    CFLAGS_save=$CFLAGS
-    CPPFLAGS_save=$CPPFLAGS
-    if test "x$PYTHON_INCLUDE_DIR" = "x"; then
-	PYTHON_INCLUDE_DIR=`$PYTHON -c "import distutils.sysconfig; print distutils.sysconfig.get_python_inc()"`
+    if test "x$want_linux_netns" = "xyes"; then
+	CFLAGS_save=$CFLAGS
+	CPPFLAGS_save=$CPPFLAGS
+	if test "x$PYTHON_INCLUDE_DIR" = "x"; then
+	    PYTHON_INCLUDE_DIR=`$PYTHON -c "import distutils.sysconfig; print distutils.sysconfig.get_python_inc()"`
+	fi
+	CFLAGS="-I$PYTHON_INCLUDE_DIR"
+	CPPFLAGS="-I$PYTHON_INCLUDE_DIR"
+	AC_CHECK_HEADERS([Python.h], [],
+	    AC_MSG_ERROR([Python bindings require Python development headers (try installing your 'python-devel' or 'python-dev' package)]))
+	CFLAGS=$CFLAGS_save
+	CPPFLAGS=$CPPFLAGS_save
+	PKG_CHECK_MODULES(libev, libev,
+	    AC_MSG_RESULT([found libev using pkgconfig OK])
+	    AC_SUBST(libev_CFLAGS)
+	    AC_SUBST(libev_LIBS),
+	    AC_MSG_RESULT([did not find libev using pkconfig...])
+	    AC_CHECK_LIB([ev], ev_set_allocator,
+		 AC_MSG_RESULT([found libev OK])
+		 AC_SUBST(libev_CFLAGS)
+		 AC_SUBST(libev_LIBS, [-lev]),
+		 AC_MSG_ERROR([Python bindings require libev (try installing your 'libev-devel' or 'libev-dev' package)])))
     fi
-    CFLAGS="-I$PYTHON_INCLUDE_DIR"
-    CPPFLAGS="-I$PYTHON_INCLUDE_DIR"
-    AC_CHECK_HEADERS([Python.h], [],
-	AC_MSG_ERROR([Python bindings require Python development headers (try installing your 'python-devel' or 'python-dev' package)]))
-    CFLAGS=$CFLAGS_save
-    CPPFLAGS=$CPPFLAGS_save
-    PKG_CHECK_MODULES(libev, libev,
-        AC_MSG_RESULT([found libev using pkgconfig OK])
-        AC_SUBST(libev_CFLAGS)
-        AC_SUBST(libev_LIBS),
-	AC_MSG_RESULT([did not find libev using pkconfig...])
-	AC_CHECK_LIB([ev], ev_set_allocator,
-	     AC_MSG_RESULT([found libev OK])
-             AC_SUBST(libev_CFLAGS)
-             AC_SUBST(libev_LIBS, [-lev]),
-	     AC_MSG_ERROR([Python bindings require libev (try installing your 'libev-devel' or 'libev-dev' package)])))
+    AC_SUBST(pyprefix, `eval ${PYTHON} ./python-prefix.py ${PYTHON_PREFIX} ${PYTHON_VERSION}`)
+    if test "${pyprefix}" != "${PYTHON_PREFIX}"; then
+	pythondir=`echo ${pythondir} | sed -e 's,[$][{]prefix[}],${pyprefix},g'`
+	pyexecdir=`echo ${pyexecdir} | sed -e 's,[$][{]exec_prefix[}],${pyprefix},g'`
+    fi
 else
     # Namespace support requires Python support
     want_linux_netns=no
@@ -342,6 +358,7 @@ ${PACKAGE_STRING} Configuration:
   GUI config:                 ${CORE_GUI_CONF_DIR}
   Daemon path:                ${SBINDIR}
   Daemon config:              ${CORE_CONF_DIR}
+  Python install prefix:      ${pyprefix}
   Python modules:             ${pythondir}
   Logs:                       ${CORE_STATE_DIR}/log
 

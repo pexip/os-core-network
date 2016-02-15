@@ -34,16 +34,19 @@
 case $1 in 
 -h | --help) 
     echo ""
-    echo "Usage: `basename $0` [-h|-v] [-b|-c <sessionid>] [-s] [<configfile.imn>]"
+    echo "Usage: `basename $0` [-h|-v] [-b|-c <sessionid>] [-s] [-a address] [-p port]"
+    echo "                [<configfile.imn>]"
     echo ""
     echo "Launches the CORE Tcl/Tk X11 GUI or starts an imn-based emulation."
     echo ""
-    echo "  -(-h)elp  show help message and exit"
+    echo "  -(-h)elp     show help message and exit"
     echo "  -(-v)ersion  show version number and exit"
-    echo "  -(-b)atch  batch mode (no X11 GUI)"
+    echo "  -(-b)atch    batch mode (no X11 GUI)"
     echo -n "  -(-c)losebatch <sessionid>  stop and clean up a batch mode "
     echo "session <sessionid>"
-    echo "  -(-s)tart  start in execute mode, not edit mode"
+    echo "  -(-s)tart    start in execute mode, not edit mode"
+    echo "  -(-a)ddress  connect to the specified IP address (default 127.0.0.1)"
+    echo "  -(-p)port    connect to the specified TCP port (default 4038)"
     echo "  <configfile.imn>  (optional) load the specified imn scenario file"
     echo ""
     echo "With no parameters, starts the GUI in edit mode with a blank canvas."
@@ -51,7 +54,7 @@ case $1 in
     exit 0
     ;; 
 -v | --version) 
-    exec echo "`basename $0` version 4.6rc6 (20130910)"
+    exec echo "`basename $0` version 4.8 (20150605)"
     exit 0
     ;; 
 esac
@@ -59,12 +62,12 @@ esac
 SHELL=/bin/sh
 export SHELL
 
-export LIBDIR="/usr/local/lib/core"
-export SBINDIR="/usr/local/sbin"
+export LIBDIR="/usr/lib/core"
+export SBINDIR="/usr/sbin"
 # eval is used here to expand "~" to user's home dir
 if [ x$CONFDIR = x ]; then export CONFDIR=`eval "echo ${HOME}/.core"` ; fi
 export CORE_STATE_DIR="/var"
-export CORE_DATA_DIR="/usr/local/share/core"
+export CORE_DATA_DIR="/usr/share/core"
 export CORE_USER=`id -u -n`
 export CORE_START_DIR=$PWD
 
@@ -92,7 +95,7 @@ cd $LIBDIR
 core=$LIBDIR/core.tcl
 
 # locate wish8.5 binaries
-WISHLIST="/usr/local/bin/wish8.5 /usr/bin/wish8.5"
+WISHLIST="/usr/bin/wish8.6 /usr/local/bin/wish8.5 /usr/bin/wish8.5"
 for wishbin in $WISHLIST
 do
     if [ -x $wishbin ]
@@ -154,10 +157,19 @@ case $1 in
     exec ${TCLBIN} $core "$@" 
     ;; 
 -s)
-    exec ${WISH} $core "--start $@"
+    shift
+    exec ${WISH} $core -- "--start" "$@"
+    ;;
+-a)
+    shift
+    exec ${WISH} $core -- "--address" "$@"
+    ;;
+-p)
+    shift
+    exec ${WISH} $core -- "--port" "$@"
     ;;
 *)
-    exec ${WISH} $core $@
+    exec ${WISH} $core -- $@
     ;; 
 esac 
 

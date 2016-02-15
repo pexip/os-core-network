@@ -7,7 +7,7 @@
 #
 
 # version of the API document that is used
-set CORE_API_VERSION 1.21
+set CORE_API_VERSION 1.23
 
 set DEFAULT_API_PORT 4038
 set g_api_exec_num 100; # starting execution number
@@ -75,7 +75,11 @@ proc receiveMessage { channel } {
     # read first four bytes of message header
     set more_data 1
     while { $more_data == 1 } {
-	set bytes [read $channel 4]
+        if { [catch { set bytes [read $channel 4] } e] } {
+            # in tcl8.6 this occurs during shutdown
+            #puts "channel closed: $e"
+            break;
+        }
 	if { [fblocked $channel]  == 1} {
 	    # 4 bytes not available yet
 	    break;
@@ -259,17 +263,18 @@ proc parseNodeMessage { data len flags } {
     array set typenames { 1 num 2 type 3 name 4 ipv4_addr 5 mac_addr \
 			6 ipv6_addr 7 model 8 emulsrv 10 session \
 			32 xpos 33 ypos 34 canv \
-			35 emuid 36 netid 48 lat 49 long 50 alt \
+			35 emuid 36 netid 37 services \
+			48 lat 49 long 50 alt \
 			66 icon 80 opaque }
     array set typesizes { num 4 type 4 name -1 ipv4_addr 4 ipv6_addr 16 \
 			mac_addr 8 model -1 emulsrv -1 session -1 \
 			xpos 2 ypos 2 canv 2 emuid 4 \
-			netid 4 lat 4 long 4 alt 4 \
+			netid 4 services -1 lat 4 long 4 alt 4 \
 			icon -1 opaque -1 }
     array set vals { 	num 0 type 0 name "" ipv4_addr -1 ipv6_addr -1 \
 			mac_addr -1 model "" emulsrv "" session "" \
 			xpos 0 ypos 0 canv "" \
-			emuid -1 netid -1 \
+			emuid -1 netid -1 services "" \
 			lat 0 long 0 alt 0 \
 			icon "" opaque "" }
 
@@ -426,14 +431,13 @@ proc parseNodeMessage { data len flags } {
 # modify a node
 #
 proc apiNodeModify { node vals_ref } {
-    global c eid zoom
+    global c eid zoom curcanvas
     upvar $vals_ref vals
     if { ![info exists c] } { return } ;# batch mode
+    set draw 0
     if { $vals(icon) != "" } {
 	setCustomImage $node $vals(icon)
-	.c delete withtag "node && $node"
-	.c delete withtag "nodelabel && $node"
-	drawNode .c $node
+	set draw 1
     }
     # move the node and its links
     if {$vals(xpos) != 0 && $vals(ypos) != 0} {
@@ -442,9 +446,19 @@ proc apiNodeModify { node vals_ref } {
     }
     if { $vals(name) != "" } {
 	setNodeName $node $vals(name)
+	set draw 1
+    }
+    if { $vals(services) != "" } {
+	set services [split $vals(services) |]
+	setNodeServices $node $services
     }
     # TODO: handle other optional on-screen data
     # lat, long, alt, heading, platform type, platform id
+    if { $draw && [getNodeCanvas $node] == $curcanvas }  {
+	.c delete withtag "node && $node"
+	.c delete withtag "nodelabel && $node"
+	drawNode .c $node
+    }
 }
 
 #
@@ -503,6 +517,10 @@ proc apiNodeCreate { node vals_ref } {
 	    puts "warning: unknown node type '$model' in Node message!"
 	}
     }
+    if { $vals(services) != "" } {
+	set services [split $vals(services) |]
+	setNodeServices $node $services
+    }
 
     if { $vals(type) == 7 } { ;# RJ45 node - used later to control linking
 	netconfInsertSection $node [list model $vals(model)]
@@ -543,15 +561,15 @@ proc parseLinkMessage { data len flags } {
 
     array set typenames {	1 node1num 2 node2num 3 delay 4 bw 5 per \
 			6 dup 7 jitter 8 mer 9 burst 10 session \
-			16 mburst 32 ltype 33 guiattr \
+			16 mburst 32 ltype 33 guiattr 34 uni \
 			35 emuid1 36 netid 37 key \
 			48 if1num 49 if1ipv4 50 if1ipv4mask 51 if1mac \
 			52 if1ipv6 53 if1ipv6mask \
 			54 if2num 55 if2ipv4 56 if2ipv4mask 57 if2mac \
 			64 if2ipv6 65 if2ipv6mask }
     array set typesizes {	node1num 4 node2num 4 delay 8 bw 8 per -1 \
-			dup -1 jitter 2 mer 2 burst 2 session -1 \
-			mburst 2 ltype 4 guiattr -1 \
+			dup -1 jitter 8 mer 2 burst 2 session -1 \
+			mburst 2 ltype 4 guiattr -1 uni 2 \
 			emuid1 4 netid 4 key 4 \
 			if1num 2 if1ipv4 4 if1ipv4mask 2 if1mac 8 \
 			if1ipv6 16 if1ipv6mask 2 \
@@ -559,7 +577,7 @@ proc parseLinkMessage { data len flags } {
 			if2ipv6 16 if2ipv6mask 2 }
     array set vals {	node1num -1 node2num -1 delay 0 bw 0 per "" \
 			dup "" jitter 0 mer 0 burst 0 session "" \
-			mburst 0 ltype 0 guiattr "" \
+			mburst 0 ltype 0 guiattr "" uni 0 \
 			emuid1 -1 netid -1 key -1 \
 			if1num -1 if1ipv4 -1 if1ipv4mask 24 if1mac -1 \
 			if1ipv6 -1 if1ipv6mask 64 \
@@ -679,6 +697,9 @@ proc parseLinkMessage { data len flags } {
 			$vals(if${i}ipv${j})/$vals(if${i}ipv${j}mask)
 	    }
 	}
+	if { $vals(if${i}mac) != -1 } {
+	    setIfcMacaddr [set node${i}] $ifname $vals(if${i}mac)
+	}
     }
     # adopt network address for WLAN (WLAN must be node 1)
     if { [nodeType $node1] == "wlan" } {
@@ -722,20 +743,6 @@ proc apiLinkAddModify { node1 node2 vals_ref add } {
     set c .c
     upvar $vals_ref vals
 
-    set labelstr ""; # build a label string
-    if {$vals(bw) > 0} { set labelstr "$labelstr$vals(bw)" }
-    if {$vals(delay) > 0} { set labelstr \
-		"$labelstr[expr $vals(delay)/1000] ms" }
-    if {$vals(per) > 0} { set labelstr "${labelstr}E=$vals(per)%" }
-    if {$vals(dup) > 0} { set labelstr "${labelstr}D=$vals(dup)%" }
-    if {$vals(jitter) > 0} {
-	set labelstr "${labelstr}J=[expr $vals(jitter)/1000] ms" }
-
-    set params ""; # parameters to send to ng_wlan netgraph node
-    if { $labelstr != "" } {
-	set params "delay=$vals(delay) bandwidth=$vals(bw) per=$vals(per)"
-	set params "$params duplicate=$vals(dup) jitter=$vals(jitter)"
-    }
     if {$vals(key) > -1} {
 	if { [nodeType $node1] == "tunnel" } {
 	    netconfInsertSection $node1 [list "tunnel-key" $vals(key)]
@@ -749,11 +756,33 @@ proc apiLinkAddModify { node1 node2 vals_ref add } {
     set wired_link [linkByPeers $node1 $node2]
     if { $wired_link != "" && $add == 0 } { ;# wired link exists, modify it
 	#puts "modify wired link"
-	setLinkBandwidth $wired_link $vals(bw)
-	setLinkDelay $wired_link $vals(delay)
-	setLinkBER $wired_link $vals(per)
-	setLinkDup $wired_link $vals(dup)
-	setLinkJitter $wired_link $vals(jitter)
+	if { $vals(uni) == 1 } { ;# unidirectional link effects message
+	    set peers [linkPeers $wired_link]
+	    if { $node1 == [lindex $peers 0] } { ;# downstream n1 <-- n2
+		set bw     [list $vals(bw) [getLinkBandwidth $wired_link up]]
+		set delay  [list $vals(delay) [getLinkDelay $wired_link up]]
+		set per    [list $vals(per) [getLinkBER $wired_link up]]
+		set dup    [list $vals(dup) [getLinkBER $wired_link up]]
+		set jitter [list $vals(jitter) [getLinkJitter $wired_link up]]
+	    } else { ;# upstream n1 --> n2
+		set bw     [list [getLinkBandwidth $wired_link] $vals(bw)]
+		set delay  [list [getLinkDelay $wired_link] $vals(delay)]
+		set per    [list [getLinkBER $wired_link] $vals(per)]
+		set dup    [list [getLinkBER $wired_link] $vals(dup)]
+		set jitter [list $vals(jitter) [getLinkJitter $wired_link]]
+	    }
+	    setLinkBandwidth $wired_link $bw
+	    setLinkDelay $wired_link $delay
+	    setLinkBER $wired_link $per
+	    setLinkDup $wired_link $dup
+	    setLinkJitter $wired_link $jitter
+	} else {
+	    setLinkBandwidth $wired_link $vals(bw)
+	    setLinkDelay $wired_link $vals(delay)
+	    setLinkBER $wired_link $vals(per)
+	    setLinkDup $wired_link $vals(dup)
+	    setLinkJitter $wired_link $vals(jitter)
+	}
 	updateLinkLabel $wired_link
 	updateLinkGuiAttr $wired_link $vals(guiattr)
 	return
@@ -994,6 +1023,7 @@ proc parseRegMessage { data len flags channel } {
     set current 0
     set str 0
     set session ""
+    set fnhint ""
 
     set plugin_cap_list {} ;# plugin capabilities list
 
@@ -1030,6 +1060,7 @@ proc parseRegMessage { data len flags channel } {
 			set session $str
 		    } else {
 		        lappend plugin_cap_list "$plugin_type=$str"
+			if { $plugin_type == "exec" } { set fnhint $str }
 		    }
 		} else {
 		    if { $prmsg == 1} { puts -nonewline "unknown($type)," }
@@ -1043,10 +1074,17 @@ proc parseRegMessage { data len flags channel } {
     if { $prmsg == 1 } { puts ") "}
 
     # reg message with session number indicates the sid of a session that
-    # was just started from a Python script (via reg exec=scriptfile.py)
+    # was just started from XML or Python script (via reg exec=scriptfile.py)
     if { $session != "" } {
+	# The channel passed to here is soon after discarded for
+	# sessions that are started from XML or Python scripts. This causes
+	# an exception in the GUI when responding back to daemon if the 
+	# response is sent after the channel has been destroyed. Setting 
+	# the channel to -1 basically disables the GUI response to the daemon, 
+	# but it turns out the daemon does not need the response anyway.
+	set channel -1
 	# assume session string only contains one session number
-	connectShutdownSession connect $channel $session
+	connectShutdownSession connect $channel $session $fnhint
 	return
     }
 
@@ -1251,6 +1289,13 @@ proc parseConfMessage { data len flags channel } {
 
     # update the configuration for a node without displaying dialog box
     if { $tflags & 0x2 } {
+	if { $obj == "emane" && $node == "" } {
+	    set node [lindex [findWlanNodes ""] 0]
+        }
+	if { $node == "" } {
+	    puts "ignoring Configure message for $obj with no node"
+	    return
+        }
 	# this is similar to popupCapabilityConfigApply
 	setCustomConfig $node $obj $types $values 0
 	if { $obj != "emane" && [nodeType $node] == "wlan"} {
@@ -1435,8 +1480,13 @@ proc parseEventMessage { data len flags channel } {
     if { $eventtype == 4 } { ;# entered the runtime state
 	if { $g_traffic_start_opt == 1 } { startTrafficScripts }
 	if { $execMode == "batch" } {
-	    global g_current_session
-	    puts "disconnecting.  Session id is $g_current_session"
+	    global g_current_session g_abort_session
+	    if {$g_abort_session} {
+		puts "Current session ($g_current_session) aborted. Disconnecting."
+		shutdownSession
+	    } else {
+		puts "Session running. Session id is $g_current_session. Disconnecting."
+	    }
 	    exit.real
 	}
     } elseif { $eventtype == 6 } { ;# shutdown state
@@ -1890,7 +1940,7 @@ proc sendNodeDelMessage { channel node } {
 
 # send a message to build, modify, or delete a link
 # type should indicate add/delete/link/unlink
-proc sendLinkMessage { channel link type } {
+proc sendLinkMessage { channel link type {sendboth true} } {
     global showAPI
     set prmsg $showAPI
     
@@ -1908,6 +1958,12 @@ proc sendLinkMessage { channel link type } {
     }
     set node1_num [string range $node1 1 end]
     set node2_num [string range $node2 1 end]
+
+    # flag for sending unidirectional link messages
+    set uni 0
+    if { $sendboth && [isLinkUni $link] } {
+	set uni 1
+    }
 
     # set flags and link message type from supplied type parameter
     set flags 0
@@ -1942,6 +1998,8 @@ proc sendLinkMessage { channel link type } {
     set len [expr {8+8+8}]
     set delay [getLinkDelay $link]
     if { $delay == "" } { set delay 0 }
+    set jitter [getLinkJitter $link]
+    if { $jitter == "" } { set jitter 0 }
     set bw [getLinkBandwidth $link]
     if { $bw == "" } { set bw 0 }
     set per [getLinkBER $link]; # PER and BER
@@ -1953,16 +2011,20 @@ proc sendLinkMessage { channel link type } {
     set dup_len 0
     set dup_msg [buildStringTLV 0x6 $dup dup_len]
     if { $type != "delete" } {
-        incr len [expr {12+12+$per_len+$dup_len}] ;# delay,bw,per,dup
+        incr len [expr {12+12+$per_len+$dup_len+12}] ;# delay,bw,per,dup,jitter
 	if {$prmsg==1 } {
-	    puts -nonewline "$delay,$bw,$per,$dup,"
+	    puts -nonewline "$delay,$bw,$per,$dup,$jitter,"
 	}
     }
-    # TODO: jitter, mer, burst, mburst
+    # TODO: mer, burst, mburst
     if { $prmsg == 1 } { puts -nonewline "type=$ltype," }
+    if { $uni } {
+	incr len 4
+	if { $prmsg == 1 } { puts -nonewline "uni=$uni," }
+    }
     if { $netid > -1 } {
 	incr len 8
-	if { $prmsg == 1 } { puts -nonewline ",netid=$netid" }
+	if { $prmsg == 1 } { puts -nonewline "netid=$netid," }
     }
     if { $key != "" } {
 	incr len 8
@@ -2006,11 +2068,17 @@ proc sendLinkMessage { channel link type } {
 	puts -nonewline $channel [binary format c2sW {0x4 8} 0 $bw]
 	puts -nonewline $channel $per_msg
 	puts -nonewline $channel $dup_msg
+	puts -nonewline $channel [binary format c2sW {0x7 8} 0 $jitter]
     }
-    # TODO: jitter, mer, burst, mburst
+    # TODO: mer, burst, mburst
 
     # link type
     puts -nonewline $channel [binary format c2sI {0x20 4} 0 $ltype]
+
+    # unidirectional flag
+    if { $uni } {
+	puts -nonewline $channel [binary format c2S {0x22 2} $uni]
+    }
 
     # network ID
     if { $netid > -1 } {
@@ -2053,6 +2121,73 @@ proc sendLinkMessage { channel link type } {
 						[binary format S 0x$ipv6w] }
 	puts -nonewline $channel [binary format x2c2S {0x41 2} $if2ipv6mask] }
 
+    if { $prmsg==1 } { puts ")" }
+    flushChannel channel "Error sending link message"
+
+    ##########################################################
+    # send a second Link Message for unidirectional link effects
+    if { $uni < 1 } {
+	return
+    }
+    # first calculate length and possibly print the message
+    set flags 0
+    if { $prmsg == 1 } {
+        puts -nonewline ">LINK(flags=$flags,$node2_num-$node1_num,"
+    }
+    set len [expr {8+8+8}] ;# len = node2num, node1num (swapped), type
+    set delay [getLinkDelay $link up]
+    if { $delay == "" } { set delay 0 }
+    set jitter [getLinkJitter $link up]
+    if { $jitter == "" } { set jitter 0 }
+    set bw [getLinkBandwidth $link up]
+    if { $bw == "" } { set bw 0 }
+    set per [getLinkBER $link up]; # PER and BER
+    if { $per == "" } { set per 0 }
+    set per_len 0
+    set per_msg [buildStringTLV 0x5 $per per_len]
+    set dup [getLinkDup $link up]
+    if { $dup == "" } { set dup 0 }
+    set dup_len 0
+    set dup_msg [buildStringTLV 0x6 $dup dup_len]
+    incr len [expr {12+12+$per_len+$dup_len+12}] ;# delay,bw,per,dup,jitter
+    if {$prmsg==1 } {
+        puts -nonewline "$delay,$bw,$per,$dup,$jitter,"
+    }
+    if { $prmsg == 1 } { puts -nonewline "type=$ltype," }
+    incr len 4 ;# unidirectional flag
+    if { $prmsg == 1 } { puts -nonewline "uni=$uni," }
+    # note that if1num / if2num are reversed here due to reversed node nums
+    if { $if2num >= 0 && ([[typemodel $node2].layer] == "NETWORK" || \
+         [nodeType $node2] == "tunnel") } {
+        incr len 4
+        if { $prmsg == 1 } { puts -nonewline "if1n=$if2num," }
+    }
+    if { $if1num >= 0 && ([[typemodel $node1].layer] == "NETWORK" || \
+         [nodeType $node1] == "tunnel") } {
+        incr len 4
+        if { $prmsg == 1 } { puts -nonewline "if2n=$if1num," }
+    }
+    # build and send the link message
+    set msg [binary format ccSc2sIc2sI \
+    	{0x2} $flags $len \
+    	{0x1 4} 0 $node2_num \
+    	{0x2 4} 0 $node1_num ]
+    puts -nonewline $channel $msg
+    puts -nonewline $channel [binary format c2sW {0x3 8} 0 $delay]
+    puts -nonewline $channel [binary format c2sW {0x4 8} 0 $bw]
+    puts -nonewline $channel $per_msg
+    puts -nonewline $channel $dup_msg
+    puts -nonewline $channel [binary format c2sW {0x7 8} 0 $jitter]
+    puts -nonewline $channel [binary format c2sI {0x20 4} 0 $ltype]
+    puts -nonewline $channel [binary format c2S {0x22 2} $uni]
+    if { $if2num >= 0 && ([[typemodel $node2].layer] == "NETWORK" || \
+         [nodeType $node2] == "tunnel") } {
+        puts -nonewline $channel [ binary format c2S {0x30 2} $if2num ]
+    }
+    if { $if1num >= 0 && ([[typemodel $node1].layer] == "NETWORK" || \
+         [nodeType $node1] == "tunnel") } {
+        puts -nonewline $channel [ binary format c2S {0x36 2} $if1num ]
+    }
     if { $prmsg==1 } { puts ")" }
     flushChannel channel "Error sending link message"
 }
@@ -2259,8 +2394,9 @@ proc sendConfReplyMessage { channel node model types values opaque } {
     }
 
     if { $prmsg == 1 } {
-	puts -nonewline ">CONF(flags=0x0,mod=$model,"
+	puts -nonewline ">CONF(flags=0,"
 	if {$node > -1 } { puts -nonewline "node=$node," }
+	puts -nonewline "obj=$model,cflags=0"
 	if {$session != "" } { puts -nonewline "session=$session," }
 	if {$opaque != "" } { puts -nonewline "opaque=$opaque," }
 	puts "types=<$types>,values=<$values>) reply"
@@ -2396,13 +2532,6 @@ proc deployCfgAPI { sock } {
 	return
     }
 
-    set nodecount [getNodeCount]
-    if { $nodecount == 0 } {
-	# This allows switching to exec mode without extra API messages,
-	# such as when connecting to a running session.
-	return
-    }
-
     set deployCfgAPI_lock 1 ;# lock
 
     set mac_byte4 0
@@ -2533,7 +2662,7 @@ proc shutdownSession {} {
 	    continue; # remote routers are ctrl. by GUI; TODO: move to daemon
 	}
 
-	sendLinkMessage $sock $link delete
+	sendLinkMessage $sock $link delete false
     }
     # shut down all nodes
     foreach node $node_list {

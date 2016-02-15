@@ -130,6 +130,18 @@ Installing from Packages on Ubuntu
 
 First install the Ubuntu |UBUNTUVERSION| operating system.
 
+.. tip::
+   With Debian or Ubuntu 14.04 (trusty) and newer, you can simply install
+   CORE using the following command::
+
+     sudo apt-get install core-network
+
+   Proceed to the "Install Quagga for routing." line below to install Quagga.
+   The other commands shown in this section apply to binary packages
+   downloaded from the CORE website instead of using the Debian/Ubuntu
+   repositories.
+
+
 .. NOTE::
    Linux package managers (e.g. `software-center`, `yum`) will take care
    of installing the dependencies for you when you use the CORE packages.
@@ -151,7 +163,7 @@ First install the Ubuntu |UBUNTUVERSION| operating system.
 * Install Quagga for routing. If you plan on working with wireless
   networks, we recommend 
   installing
-  `OSPF MDR <http://cs.itd.nrl.navy.mil/work/ospf-manet/index.php>`__
+  `OSPF MDR <http://www.nrl.navy.mil/itd/ncs/products/ospf-manet>`__
   (replace `amd64` below with `i386` if needed 
   to match your architecture):
 
@@ -210,7 +222,8 @@ examples below, replace with `i686` is using a 32-bit architecture. Also,
 `fc15` is shown below for Fedora 15 packages, replace with the appropriate
 Fedora release number.
 
-* **CentOS only:** in order to install the `libev` prerequisite package, you 
+* **CentOS only:** in order to install the `libev` and `tkimg` prerequisite
+  packages, you 
   first need to install  the `EPEL <http://fedoraproject.org/wiki/EPEL>`_ repo
   (Extra Packages for Enterprise Linux):
 
@@ -218,6 +231,18 @@ Fedora release number.
 
     wget http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm
     yum localinstall epel-release-6-8.noarch.rpm
+
+
+* **CentOS 7.x only:** as of this writing, the `tkimg` prerequisite package
+  is missing from EPEL 7.x, but the EPEL 6.x package can be manually installed
+  from 
+  `here <http://dl.fedoraproject.org/pub/epel/6/x86_64/repoview/tkimg.html>`_
+
+  ::
+
+    wget http://dl.fedoraproject.org/pub/epel/6/x86_64/tkimg-1.4-1.el6.x86_64.rpm
+    yum localinstall tkimg-1.4-1.el6.x86_64.rpm
+
 
 * **Optional:** install the prerequisite packages (otherwise skip this
   step and have the package manager install them for you.)
@@ -241,7 +266,7 @@ Fedora release number.
 
 * Install Quagga for routing. If you plan on working with wireless networks,
   we recommend installing
-  `OSPF MDR <http://cs.itd.nrl.navy.mil/work/ospf-manet/>`_:
+  `OSPF MDR <http://www.nrl.navy.mil/itd/ncs/products/ospf-manet>`_:
 
   .. parsed-literal::
 
@@ -621,7 +646,7 @@ there are two different Quagga packages that you may use:
   .. index:: MANET Designated Routers (MDR)
 
 * 
-  `OSPF MANET Designated Routers <http://cs.itd.nrl.navy.mil/work/ospf-manet/index.php>`_ (MDR) - the Quagga routing suite with a modified version of OSPFv3,
+  `OSPF MANET Designated Routers <http://www.nrl.navy.mil/itd/ncs/products/ospf-manet>`_ (MDR) - the Quagga routing suite with a modified version of OSPFv3,
   optimized for use with mobile wireless networks. The *mdr* node type (and the MDR service) requires this variant of Quagga.
 
 If you plan on working with wireless networks, we recommend installing OSPF MDR;

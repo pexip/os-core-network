@@ -36,18 +36,25 @@ class MobilityManager(ConfigurableManager):
         self.session.broker.handlers += (self.physnodehandlelink, )
         self.register()
 
-    def startup(self):
+    def startup(self, nodenums=None):
         ''' Session is transitioning from instantiation to runtime state.
         Instantiate any mobility models that have been configured for a WLAN.
         '''
-        for nodenum in self.configs:
-            v = self.configs[nodenum]
+        if nodenums is None:
+            nodenums = self.configs.keys()
+            
+        for nodenum in nodenums:
             try:
                 n = self.session.obj(nodenum)
             except KeyError:
                 self.session.warn("Skipping mobility configuration for unknown"
                                 "node %d." % nodenum)
                 continue
+            if nodenum not in self.configs:
+                self.session.warn("Missing mobility configuration for node "
+                                  "%d." % nodenum)
+                continue
+            v = self.configs[nodenum]
             for model in v:
                 try:
                     cls = self._modelclsmap[model[0]]
@@ -60,12 +67,27 @@ class MobilityManager(ConfigurableManager):
                 self.installphysnodes(n)
             if n.mobility:
                 self.session.evq.add_event(0.0, n.mobility.startup)
+        return ()
 
 
     def reset(self):
         ''' Reset all configs.
         '''
         self.clearconfig(nodenum=None)
+        
+    def setconfig(self, nodenum, conftype, values):
+        ''' Normal setconfig() with check for run-time updates for WLANs.
+        '''
+        super(MobilityManager, self).setconfig(nodenum, conftype, values)
+        if self.session is None:
+            return
+        if self.session.getstate() == coreapi.CORE_EVENT_RUNTIME_STATE:
+            try:
+                n = self.session.obj(nodenum)
+            except KeyError:
+                self.session.warn("Skipping mobility configuration for unknown"
+                                "node %d." % nodenum)
+            n.updatemodel(conftype, values)
 
     def register(self):
         ''' Register models as configurable object(s) with the Session object.
@@ -246,6 +268,13 @@ class WirelessModel(Configurable):
         
     def update(self, moved, moved_netifs):
         raise NotImplementedError
+        
+    def updateconfig(self, values):
+        ''' For run-time updates of model config.
+        Returns True when self._positioncallback() and self.setlinkparams()
+        should be invoked.
+        '''
+        return False
 
 
 class BasicRangeModel(WirelessModel):
@@ -288,6 +317,9 @@ class BasicRangeModel(WirelessModel):
         if self.verbose:
             self.session.info("Basic range model configured for WLAN %d using" \
                 " range %d" % (objid, self.range))
+        self.valuestolinkparams(values)
+
+    def valuestolinkparams(self, values):
         self.bw = int(self.valueof("bandwidth", values))
         if self.bw == 0.0:
             self.bw = None
@@ -364,8 +396,11 @@ class BasicRangeModel(WirelessModel):
         '''
         if netif == netif2:
             return
-        (x, y, z) = self._netifs[netif]    
-        (x2, y2, z2) = self._netifs[netif2]
+        try:
+            (x, y, z) = self._netifs[netif]    
+            (x2, y2, z2) = self._netifs[netif2]
+        except KeyError:
+            return
         if x2 is None or y2 is None:
             return
         
@@ -390,7 +425,8 @@ class BasicRangeModel(WirelessModel):
                 self.sendlinkmsg(a, b)
 
 
-    def calcdistance(self, p1, p2):
+    @staticmethod
+    def calcdistance(p1, p2):
         ''' Calculate the distance between two three-dimensional points.
         '''
         a = p1[0] - p2[0]
@@ -399,6 +435,15 @@ class BasicRangeModel(WirelessModel):
         if p1[2] is not None and p2[2] is not None:
             c = p1[2] - p2[2]
         return math.hypot(math.hypot(a, b), c)
+        
+    def updateconfig(self, values):
+        ''' Configuration has changed during runtime.
+        MobilityManager.setconfig() -> WlanNode.updatemodel() -> 
+        WirelessModel.updateconfig()
+        '''
+        self.valuestolinkparams(values)
+        self.range = float(self.valueof("range",  values))        
+        return True
         
     def linkmsg(self, netif, netif2, flags):
         ''' Create a wireless link/unlink API message.
@@ -648,7 +693,7 @@ class WayPointMobility(WirelessModel):
         node.position.set(x, y, z)
         msg = node.tonodemsg(flags=0)
         self.session.broadcastraw(None, msg)
-        self.session.sdt.updatenode(node, flags=0, x=x, y=y, z=z)
+        self.session.sdt.updatenode(node.objid, flags=0, x=x, y=y, z=z)
         
     def setendtime(self):
         ''' Set self.endtime to the time of the last waypoint in the queue of
