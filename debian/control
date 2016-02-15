@@ -21,6 +21,7 @@ Standards-Version: 3.9.4
 Homepage: http://cs.itd.nrl.navy.mil/work/core
 Vcs-Git: git://anonscm.debian.org/collab-maint/core-network.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/core-network.git
+XS-Pexip-Upstream: http://ftp.debian.org/debian/ sid
 
 Package: core-network
 Architecture: all
