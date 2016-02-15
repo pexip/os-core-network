@@ -12,7 +12,7 @@ Build-Depends: debhelper (>= 9),
                gcc (>= 4.8.1-2~),
                help2man,
                imagemagick,
-               iproute2 | iproute,
+               iproute | iproute2,
                libev-dev,
                net-tools | freebsd-net-tools,
                pkg-config,
@@ -58,7 +58,7 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          bridge-utils,
          ebtables,
-         iproute2 | iproute,
+         iproute | iproute2,
          python
 Recommends: quagga
 Suggests: core-network-gui
