@@ -76,13 +76,16 @@ class ConfigurableManager(object):
             try:
                 # key=value
                 (key, value) = kv.split('=', 1)
+                if value is not None and not value.strip():
+                    value = None
             except ValueError:
                 # value only
                 key = keys[kvs.index(kv)]
                 value = kv
             if key not in keys:
                 raise ValueError, "invalid key: %s" % key
-            setattr(target, key, value)
+            if value is not None:
+                setattr(target, key, value)
         return None
 
     def reset(self):
@@ -337,14 +340,14 @@ class Configurable(object):
                 return 0
         return value
 
-
-    def valueof(self, name,  values):
+    @classmethod
+    def valueof(cls, name,  values):
         ''' Helper to return a value by the name defined in confmatrix.
             Checks if it is boolean'''
-        i = self.getnames().index(name)
-        if self._confmatrix[i][1] == coreapi.CONF_DATA_TYPE_BOOL and \
+        i = cls.getnames().index(name)
+        if cls._confmatrix[i][1] == coreapi.CONF_DATA_TYPE_BOOL and \
            values[i] != "":
-            return self.booltooffon( values[i] )
+            return cls.booltooffon(values[i])
         else:
             return values[i]
 

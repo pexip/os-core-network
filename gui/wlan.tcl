@@ -132,15 +132,20 @@ proc updateRangeCircles { wlan range } {
 }
 
 proc linkSelectedNodes { wlan nodes } {
+    set canvas [getNodeCanvas $wlan]
+
     foreach node $nodes {
 	if { $wlan == $node } { continue } ;# don't link to self
 	if { [ifcByPeer $wlan $node] != "" } { continue } ;# already linked
+	if { [getNodeCanvas $node] != $canvas } { continue }; # on a different canvas
         newGUILink $wlan $node
     }
 }
 
 proc linkAllNodes { wlan } {
     global node_list
+
+    set canvas [getNodeCanvas $wlan]
 
     # vars related to the status bar graph
     set num 0
@@ -157,6 +162,7 @@ proc linkAllNodes { wlan } {
 	     [expr { ($num % $update_interval) }] == 0 } { update }
         if { [nodeType $node] != "router" } { continue }
 	if { [ifcByPeer $wlan $node] != "" } { continue } ;# already linked
+	if { [getNodeCanvas $node] != $canvas } { continue }; # on a different canvas
         newGUILink $wlan $node
     }
     .c config -cursor left_ptr; update
@@ -304,6 +310,7 @@ proc wlanConfigDialogHelper { wi target apply } {
     global systype
     global plugin_img_edit
     global g_selected_model
+    global oper_mode
 
     set wlan $target
     set emulation_type [lindex [getEmulPlugin $target] 1]
@@ -378,6 +385,10 @@ proc wlanConfigDialogHelper { wi target apply } {
 	# remove any range circles
 	updateRangeCircles $target 0
 
+	if { $oper_mode == "exec" } {
+	    # this generates Config Messages for updating the model parameters
+	    pluginCapsInitialize $target "mobmodel"
+	}
 	return
     }
 

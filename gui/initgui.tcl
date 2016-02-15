@@ -1,5 +1,5 @@
 #
-# Copyright 2005-2013 the Boeing Company.
+# Copyright 2005-2014 the Boeing Company.
 # See the LICENSE file included in this distribution.
 #
 
@@ -228,6 +228,9 @@ bind . <Control-n> "fileNewDialogBox"
   -accelerator "Ctrl+O" -command { fileOpenDialogBox }
 bind . <Control-o> "fileOpenDialogBox"
 
+.menubar.file add command -label "Reload" -underline 0 \
+  -command { openFile $currentFile } 
+
 .menubar.file add command -label Save -underline 0 \
   -accelerator "Ctrl+S" -command { fileSaveDialogBox "" }
 bind . <Control-s> "fileSaveDialogBox {}"
@@ -240,7 +243,10 @@ bind . <Control-s> "fileSaveDialogBox {}"
 
 .menubar.file add separator
 .menubar.file add command -label "Export Python script..." -command exportPython
-.menubar.file add command -label "Execute Python script..." -command execPython
+.menubar.file add command -label "Execute XML or Python script..." \
+	-command { execPython false }
+.menubar.file add command -label "Execute Python script with options..." \
+	-command { execPython true }
 
 .menubar.file add separator
 .menubar.file add command -label "Open current file in editor..." \
@@ -274,7 +280,6 @@ bind . <Control-s> "fileSaveDialogBox {}"
     $w.e1 insert 0 "lpr"
     pack $w.e1 -side top -pady 5 -padx 10 -fill x
 }
-# Boeing: added "Save Screenshot" function and most-recently-used file list
 .menubar.file add command -label "Save screenshot..." -command {
         global currentFile
 	set initialfile [file tail $currentFile]
@@ -292,10 +297,10 @@ bind . <Control-s> "fileSaveDialogBox {}"
 	}
     }
 .menubar.file add separator
+set g_mru_index 15 ;# index of first MRU list item
 foreach f $g_mrulist {
-    .menubar.file add command -label "$f" -command "mrufile \"$f\""
+    .menubar.file add command -label "$f" -command "mrufile {$f}"
 }
-# end Boeing changes 
 .menubar.file add separator
 .menubar.file add command -label Quit -underline 0 -command { exit }
 
@@ -595,9 +600,9 @@ menu .menubar.session -tearoff 1
 #
 menu .menubar.help -tearoff 0
 .menubar.help add command -label "Online manual (www)" -command \
-  "_launchBrowser http://pf.itd.nrl.navy.mil/core/core-html/"
+  "_launchBrowser http://downloads.pf.itd.nrl.navy.mil/docs/core/core-html/"
 .menubar.help add command -label "CORE website (www)" -command \
-  "_launchBrowser http://cs.itd.nrl.navy.mil/work/core/index.php"
+  "_launchBrowser http://www.nrl.navy.mil/itd/ncs/products/core"
 .menubar.help add command -label "Mailing list (www)" -command \
   "_launchBrowser http://pf.itd.nrl.navy.mil/mailman/listinfo/core-users"
 .menubar.help add command -label "About" -command popupAbout

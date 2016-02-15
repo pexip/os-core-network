@@ -15,10 +15,27 @@ import subprocess, os, ast
 
 def checkexec(execlist):
     for bin in execlist:
-        # note that os.access() uses real uid/gid; that should be okay
-        # here
-        if not os.access(bin, os.X_OK):
+        if which(bin) is None:
             raise EnvironmentError, "executable not found: %s" % bin
+
+def which(program):
+    ''' From: http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
+    '''
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
 
 def ensurepath(pathlist):
     searchpath = os.environ["PATH"].split(":")
@@ -82,6 +99,22 @@ def mutedetach(*args, **kwds):
     kwds["stdout"] = open(os.devnull, "w")
     kwds["stderr"] = subprocess.STDOUT
     return subprocess.Popen(*args, **kwds).pid
+
+def cmdresult(args):
+    ''' Execute a command on the host and return a tuple containing the
+        exit status and result string. stderr output
+        is folded into the stdout result string.
+    '''
+    cmdid = subprocess.Popen(args, stdin = subprocess.PIPE,
+                             stdout = subprocess.PIPE,
+                             stderr = subprocess.PIPE)
+    cmdid.stdin.close()
+    result = cmdid.stdout.read()
+    result += cmdid.stderr.read()
+    cmdid.stdout.close()
+    cmdid.stderr.close()
+    status = cmdid.wait()
+    return (status, result)
 
 def hexdump(s, bytes_per_word = 2, words_per_line = 8):
     dump = ""
@@ -226,3 +259,16 @@ def readfileintodict(filename, d):
             d[key] = value.strip()
         except ValueError:
             pass
+
+
+def checkforkernelmodule(name):
+    ''' Return a string if a Linux kernel module is loaded, None otherwise.
+    The string is the line from /proc/modules containing the module name,
+    memory size (bytes), number of loaded instances, dependencies, state,
+    and kernel memory offset.
+    '''
+    with open('/proc/modules', 'r') as f:
+        for line in f:
+            if line[:len(name)] == name:
+                return line
+    return None

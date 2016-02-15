@@ -1,6 +1,6 @@
 #
 # CORE
-# Copyright (c)2010-2012 the Boeing Company.
+# Copyright (c)2010-2013 the Boeing Company.
 # See the LICENSE file included in this distribution.
 #
 # author: Tom Goff <thomas.goff@boeing.com>
@@ -16,7 +16,7 @@ def enumdict(d):
 
 # Constants
 
-CORE_API_VER		=	"1.21"
+CORE_API_VER		=	"1.23"
 CORE_API_PORT		=	4038
 
 # Message types
@@ -118,6 +118,7 @@ link_tlvs = {
     0x10: "CORE_TLV_LINK_MBURST",
     0x20: "CORE_TLV_LINK_TYPE",
     0x21: "CORE_TLV_LINK_GUIATTR",
+    0x22: "CORE_TLV_LINK_UNI",
     0x23: "CORE_TLV_LINK_EMUID",
     0x24: "CORE_TLV_LINK_NETID",
     0x25: "CORE_TLV_LINK_KEY",
@@ -281,6 +282,7 @@ event_types = dict(enumerate([
     "CORE_EVENT_FILE_OPEN",
     "CORE_EVENT_FILE_SAVE",
     "CORE_EVENT_SCHEDULED",
+    "CORE_EVENT_RECONFIGURE",
 ]))
 
 enumdict(event_types)

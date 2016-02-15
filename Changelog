@@ -1,4 +1,84 @@
-2013-09-05 CORE 4.6
+2015-06-05 CORE 4.8
+  * EMANE:
+    - support for EMANE 0.9.2
+    - run emane in each container when using EMANE 0.9.2
+    - support using separate control networks for EMANE OTA and event traffic
+  * GUI:
+    - fixed an issue where the adjacency widget lines pointed to old node positions
+    - fixed an issue where not all EMANE 0.9.x IEEE 802.11 MAC parameter were configurable
+    - fixed an issue related to running python scripts from the GUI when using tcl/tk version 8.6
+    - improved batch mode execution to display the check emulation light status
+    - improved managing multiple sessions
+    - improved support for using multiple canvases
+    - added a reload option to the file menu to revert back to a saved scenario
+  * DAEMON:
+    - support exporting scenarios in NRL Network Modeling Framework 1.0 XML format
+    - support importing scenarios in NRL Network Modeling Framework 1.0 XML format
+    - support exporting the deployed scenario state in NRL NMF XML 1.0 format
+    - improved EMANE post-startup processing to better synchronize distributed emulations
+    - improved how addresses are assigned to tun/tap devices
+    - added support for python state-change callbacks
+  * SERVICES:
+    - added mgen sink and mgen actor services
+    - added oslrv2 and olsr.org services
+    - added a docker service
+  * BUILD:
+    - improved the install/uninstall process
+    - improved debian and rpm packaging
+  * BUGFIXES:
+    - updated the http service for ubuntu 14.04
+    - improved included examples
+    - shortened the length of network interface names
+    - improved how the core system service manages running the core daemon
+    - fixed an issues related to applying session configuration setting
+    - improved detecting when a distributed emulation is already running
+    - improved documentation
+
+2014-08-06 CORE 4.7
+
+  * EMANE:
+    - support for EMANE 0.9.1
+    - fix error when using Comm Effect model with loss/duplicate string values
+    - enable flow control in virtual transport if enabled in the MAC model
+    - fix bug #150 where EMANE event service/address port were not used
+  * GUI:
+    - support Tcl/Tk 8.6 when available
+    - added --(a)ddress and --(p)ort arguments to core-gui command-line
+    - added File > Execute XML or Python script... option
+    - added File > Execute Python script with options... menu item
+    - when executing Python script from GUI, run in background thread, wait for
+      RUNTIME state
+    - enter RUNTIME state when start button pressed with empty canvas
+    - added support for asymmetric link effects
+    - support link delays up to 274 seconds (netem maximum)
+    - allow runtime changes of WLAN link effects
+  * DAEMON:
+    - set NODE_NAME, NODE_NUMBER, SESSION_SHORT in default vnoded environment
+    - changed host device naming to use veth, tap prefixes; b.n.SS for bridges
+    - allow parsing XML files into live running session
+    - enable link effects between hub/switch and hub/switch connections
+    - update MDR service to use broadcast interfaces for non-WLAN links
+    - allow node class to be specified when initializing XML parser
+    - save and parse canvas origin (reference point) and scale in MP XML
+    - up/down control script session option
+    - fix hash calculation used to determine GRE tunnel keys
+    - use shell script to detach SMF on startup
+    - added NRL services for mgen sink and nrlolsrv2
+    - use SDT URL session option
+    - added core-manage tool for addons to add/remove/check services, models,
+      and custom node types
+  * API:
+    - implement local flag in Execute Message for running host commands
+    - jitter changed to 64-bit value to align with delay in Link Message
+    - added unidirectional link flag TLV to Link Message
+    - added reconfigure event type for re-generating service config files
+    - return errors in API with failed services
+  * BUGFIXES:
+    - fix HTTP service running under Ubuntu
+    - fixed the following bugs: #150, 169, 188, 220, 225, 230, 231, 242, 244,
+      247, 248, 250, 251
+
+2013-09-25 CORE 4.6
 
   * NOTE: cored is now core-daemon, and core is now core-gui (for Debian
     acceptance)

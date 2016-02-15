@@ -1,27 +1,34 @@
 #
 # CORE
-# Copyright (c)2010-2013 the Boeing Company.
+# Copyright (c)2010-2014 the Boeing Company.
 # See the LICENSE file included in this distribution.
 #
 # author: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
 #
 '''
-nodes.py: definition of an EmaneNode class for implementing configuration 
+nodes.py: definition of an EmaneNode class for implementing configuration
 control of an EMANE emulation. An EmaneNode has several attached NEMs that
 share the same MAC+PHY model.
 '''
 
 import sys
+import os.path
 
 from core.api import coreapi
 from core.coreobj import PyCoreNet
+try:
+    from emanesh.events import EventService
+    from emanesh.events import LocationEvent
+except Exception, e:
+    pass
+
 try:
     import emaneeventservice
     import emaneeventlocation
 except Exception, e:
     ''' Don't require all CORE users to have EMANE libeventservice and its
         Python bindings installed.
-    ''' 
+    '''
     pass
 
 class EmaneNet(PyCoreNet):
@@ -83,7 +90,7 @@ class EmaneNode(EmaneNet):
                                verbose=self.verbose, values=config)
 
     def setnemid(self, netif, nemid):
-        ''' Record an interface to numerical ID mapping. The Emane controller 
+        ''' Record an interface to numerical ID mapping. The Emane controller
             object manages and assigns these IDs for all NEMs.
         '''
         self.nemidmap[netif] = nemid
@@ -104,7 +111,7 @@ class EmaneNode(EmaneNet):
             if self.nemidmap[netif] == nemid:
                 return netif
         return None
-        
+
     def netifs(self, sort=True):
         ''' Retrieve list of linked interfaces sorted by node number.
         '''
@@ -157,7 +164,7 @@ class EmaneNode(EmaneNet):
             self.buildtransportxml(emane, vtype)
         if need_raw:
             self.buildtransportxml(emane, rtype)
-            
+
     def buildtransportxml(self, emane, type):
         ''' Write a transport XML file for the Virtual or Raw Transport.
         '''
@@ -166,19 +173,36 @@ class EmaneNode(EmaneNet):
         trans.setAttribute("name", "%s Transport" % type.capitalize())
         trans.setAttribute("library", "trans%s" % type.lower())
         trans.appendChild(emane.xmlparam(transdoc, "bitrate", "0"))
+
+        flowcontrol = False
+        names = self.model.getnames()
+        values = emane.getconfig(self.objid, self.model._name,
+                                 self.model.getdefaultvalues())[1]
+        if "flowcontrolenable" in names and values:
+            i = names.index("flowcontrolenable")
+            if self.model.booltooffon(values[i]) == "on":
+                flowcontrol = True
+
         if "virtual" in type.lower():
-            trans.appendChild(emane.xmlparam(transdoc, "devicepath",
-                              "/dev/net/tun"))
+            if os.path.exists("/dev/net/tun_flowctl"):
+                trans.appendChild(emane.xmlparam(transdoc, "devicepath",
+                                  "/dev/net/tun_flowctl"))
+            else:
+                trans.appendChild(emane.xmlparam(transdoc, "devicepath",
+                                  "/dev/net/tun"))
+            if flowcontrol:
+                trans.appendChild(emane.xmlparam(transdoc, "flowcontrolenable",
+                                                 "on"))
         emane.xmlwrite(transdoc, self.transportxmlname(type.lower()))
-        
+
     def transportxmlname(self, type):
-        ''' Return the string name for the Transport XML file, 
+        ''' Return the string name for the Transport XML file,
             e.g. 'n3transvirtual.xml'
         '''
         return "n%strans%s.xml" % (self.objid, type)
 
 
-    def installnetifs(self):
+    def installnetifs(self, do_netns=True):
         ''' Install TAP devices into their namespaces. This is done after
             EMANE daemons have been started, because that is their only chance
             to bind to the TAPs.
@@ -191,8 +215,9 @@ class EmaneNode(EmaneNet):
                                     self.objid, warntxt)
 
         for netif in self.netifs():
-            if "virtual" in netif.transport_type.lower():
+            if do_netns and "virtual" in netif.transport_type.lower():
                 netif.install()
+            netif.setaddrs()
             # if we are listening for EMANE events, don't generate them
             if self.session.emane.doeventmonitor():
                 netif.poshook = None
@@ -202,9 +227,9 @@ class EmaneNode(EmaneNet):
             netif.poshook = self.setnemposition
             (x,y,z) = netif.node.position.get()
             self.setnemposition(netif, x, y, z)
-    
+
     def deinstallnetifs(self):
-        ''' Uninstall TAP devices. This invokes their shutdown method for 
+        ''' Uninstall TAP devices. This invokes their shutdown method for
             any required cleanup; the device may be actually removed when
             emanetransportd terminates.
         '''
@@ -230,17 +255,24 @@ class EmaneNode(EmaneNet):
             self.info("setnemposition %s (%s) x,y,z=(%d,%d,%s)"
                       "(%.6f,%.6f,%.6f)" % \
                       (ifname, nemid, x, y, z, lat, long, alt))
-        event = emaneeventlocation.EventLocation(1)
+        if self.session.emane.version >= self.session.emane.EMANE091:
+            event = LocationEvent()
+        else:
+            event = emaneeventlocation.EventLocation(1)
         # altitude must be an integer or warning is printed
         # unused: yaw, pitch, roll, azimuth, elevation, velocity
         alt = int(round(alt))
-        event.set(0, nemid, lat, long, alt)
-        self.session.emane.service.publish(emaneeventlocation.EVENT_ID,
+        if self.session.emane.version >= self.session.emane.EMANE091:
+            event.append(nemid, latitude=lat, longitude=long, altitude=alt)
+            self.session.emane.service.publish(0, event)
+        else:
+            event.set(0, nemid, lat, long, alt)
+            self.session.emane.service.publish(emaneeventlocation.EVENT_ID,
                                            emaneeventservice.PLATFORMID_ANY,
                                            emaneeventservice.NEMID_ANY,
                                            emaneeventservice.COMPONENTID_ANY,
                                            event.export())
-    
+
     def setnempositions(self, moved_netifs):
         ''' Several NEMs have moved, from e.g. a WaypointMobilityModel
             calculation. Generate an EMANE Location Event having several
@@ -252,8 +284,11 @@ class EmaneNode(EmaneNet):
             if self.verbose:
                 self.info("position service not available")
             return
-        
-        event = emaneeventlocation.EventLocation(len(moved_netifs))
+
+        if self.session.emane.version >= self.session.emane.EMANE091:
+            event = LocationEvent()
+        else:
+            event = emaneeventlocation.EventLocation(len(moved_netifs))
         i = 0
         for netif in moved_netifs:
             nemid =  self.getnemid(netif)
@@ -269,13 +304,19 @@ class EmaneNode(EmaneNet):
                           (i, ifname, nemid, x, y, z, lat, long, alt))
             # altitude must be an integer or warning is printed
             alt = int(round(alt))
-            event.set(i, nemid, lat, long, alt)
+            if self.session.emane.version >= self.session.emane.EMANE091:
+                event.append(nemid, latitude=lat, longitude=long, altitude=alt)
+            else:
+                event.set(i, nemid, lat, long, alt)
             i += 1
-            
-        self.session.emane.service.publish(emaneeventlocation.EVENT_ID,
+
+        if self.session.emane.version >= self.session.emane.EMANE091:
+            self.session.emane.service.publish(0, event)
+        else:
+            self.session.emane.service.publish(emaneeventlocation.EVENT_ID,
                                            emaneeventservice.PLATFORMID_ANY,
                                            emaneeventservice.NEMID_ANY,
                                            emaneeventservice.COMPONENTID_ANY,
                                            event.export())
-        
+
 

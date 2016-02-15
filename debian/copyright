@@ -1,80 +1,85 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: core
-Source: http://cs.itd.nrl.navy.mil/work/core or
-        http://hipserver.mct.phantomworks.org/core/pub-4.6rc6
+Source: http://www.nrl.navy.mil/itd/ncs/products/core
 
 Files: *
-Copyright: 2005-2013, the Boeing Company,
-           by Jeffrey M. Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
+Copyright: 2005-2014 Jeffrey M. Ahrenholz <ahrenholz@gmail.com>
+           2005-2015 the Boeing Company
 License: BSD-2-clause
 
 Files: gui/annotations.tcl gui/topogen.tcl
-Copyright: 2007-2008, University of Zagreb, Croatia
-           2007-2013, the Boeing Company
+Copyright: 2007-2008 University of Zagreb, Croatia
+           2007-2013 the Boeing Company
 License: BSD-2-clause
 
 Files: gui/canvas.tcl gui/cfgparse.tcl gui/ipv4.tcl gui/ipv6.tcl gui/wlan.tcl
-Copyright: 2005-2008, University of Zagreb, Croatia
-           2005-2013, the Boeing Company
+Copyright: 2005-2008 University of Zagreb, Croatia
+           2005-2013 the Boeing Company
 License: BSD-2-clause
 
-Files: gui/core.tcl gui/editor.tcl gui/exec.tcl gui/filemgmt.tcl gui/help.tcl
-       gui/initgui.tcl gui/linkcfg.tcl gui/nodecfg.tcl gui/ns2imunes.tcl
-       gui/core-gui.in
-Copyright: 2004-2008, University of Zagreb, Croatia
-           2005-2013, the Boeing Company
+Files: gui/core.tcl gui/editor.tcl gui/exec.tcl gui/help.tcl gui/linkcfg.tcl
+       gui/nodecfg.tcl gui/ns2imunes.tcl
+Copyright: 2004-2008 University of Zagreb, Croatia
+           2005-2013 the Boeing Company
+License: BSD-2-clause
+
+Files: gui/filemgmt.tcl gui/initgui.tcl gui/core-gui.in
+Copyright: 2004-2008 University of Zagreb, Croatia
+           2005-2014 the Boeing Company
 License: BSD-2-clause
 
 Files: gui/gpgui.tcl
-Copyright: 2007, Petra Schilhard
-           2007-2013, the Boeing Company
+Copyright: 2007      Petra Schilhard
+           2007-2013 the Boeing Company
 License: BSD-2-clause
 
 Files: gui/graph_partitioning.tcl
-Copyright: 2007, Petra Schilhard
-           2007-2013, the Boeing Company
+Copyright: 2007      Petra Schilhard
+           2007-2013 the Boeing Company
 License: BSD-2-clause
 
 Files: kernel/freebsd/ng_pipe/ng_pipe.c
-Copyright: 2004-2008, University of Zagreb, Croatia
-           2007-2008, FreeBSD Foundation
+Copyright: 2004-2008 University of Zagreb, Croatia
+           2007-2008 FreeBSD Foundation
 License: BSD-2-clause
 
 Files: kernel/freebsd/ng_pipe/ng_pipe.h
-Copyright: 2004, 2007, University of Zagreb, Croatia
-           2007, FreeBSD Foundation
+Copyright: 2004, 2007 University of Zagreb, Croatia
+           2007       FreeBSD Foundation
 License: BSD-2-clause
 
 Files: kernel/freebsd/ng_pipe/ng_pipe_freebsd4.c
-Copyright: 1996-1999, Whistle Communications, Inc.
-           2004, University of Zagreb, Croatia
+Copyright: 1996-1999 Whistle Communications, Inc.
+           2004      University of Zagreb, Croatia
 License: BSD-2-clause
 
 Files: kernel/freebsd/ng_wlan/ng_wlan.c kernel/freebsd/ng_wlan/ng_wlan.h
-Copyright: 2004 Ruslan Ermilov
-           2006-2011, the Boeing Company
+Copyright: 2004      Ruslan Ermilov
+           2006-2011 the Boeing Company
 License: BSD-2-clause
 
 Files: kernel/freebsd/vimage/vimage.c
 Copyright: 2002-2004 Marko Zec <zec@fer.hr>
-           2009 University of Zagreb
+           2009      University of Zagreb
            2009 FreeBSD Foundation
 License: BSD-2-clause
 
 Files: kernel/freebsd/vimage/vimage.8
 Copyright: 2002-2003 Marko Zec <zec@fer.hr>
-           2009 University of Zagreb
-           2009 FreeBSD Foundation
+           2009      University of Zagreb
+           2009      FreeBSD Foundation
 License: BSD-2-clause
 
 Files: scripts/core-daemon-init.d-SUSE
-Copyright: 1995-2005, Kurt Garloff, SUSE / Novell Inc.
-License: LGPL2.1+
+Copyright: 1995-2005 Kurt Garloff, SUSE / Novell Inc.
+License: LGPL-2.1+
 
 Files: debian/*
-Copyright: 2013 Joao Eriberto Mota Filho <eriberto@eriberto.pro.br>,
-                Jeffrey M. Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
+Copyright: 2009-2013 Jeffrey M. Ahrenholz <ahrenholz@gmail.com>
+           2013-2015 Joao Eriberto Mota Filho <eriberto@debian.org>
 License: BSD-2-clause
+Comment: Jeffrey maintained a packaging work outside Debian between
+         2009 and 2013.
 
 License: BSD-2-clause
  Redistribution and use in source and binary forms, with or without
@@ -98,20 +103,19 @@ License: BSD-2-clause
  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-License: LGPL2.1+
- This library is free software; you can redistribute it and/or modify
- it under the terms of the GNU Library General Public License as
- published by the Free Software Foundation; either version 2.1 of the
- License, or (at your option) any later version.
+License: LGPL-2.1+
+ This package is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1+ of the License, or (at your option) any later version.
  .
- This library is distributed in the hope that it will be useful,
+ This package is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  Lesser General Public License for more details.
  .
- You should have received a copy of the GNU Lesser General Public
- License along with this library; if not, write to the Free Software
- Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ You should have received a copy of the GNU General Public License
+ along with this program. If not, see <http://www.gnu.org/licenses/>.
  .
- On Debian systems, the complete text of the GNU Lesser General Public
- License (latest version) can be found in `/usr/share/common-licenses/LGPL-2.1'.
+ On Debian systems, the complete text of the GNU Lesser General
+ Public License can be found in "/usr/share/common-licenses/LGPL-2.1".

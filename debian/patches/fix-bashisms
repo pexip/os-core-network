@@ -1,0 +1,44 @@
+Description: fix some bashisms. (Closes: #772214)
+Author: Joao Eriberto Mota Filho <eriberto@debian.org>
+Last-Update: 2015-06-21
+Index: core-network-4.8/daemon/sbin/core-cleanup
+===================================================================
+--- core-network-4.8.orig/daemon/sbin/core-cleanup
++++ core-network-4.8/daemon/sbin/core-cleanup
+@@ -3,7 +3,8 @@
+ if [ "z$1" = "z-h" -o "z$1" = "z--help" ]; then
+     echo "usage: $0 [-d [-l]]"
+     echo -n "    Clean up all CORE namespaces processes, bridges, interfaces, "
+-    echo "and session\n    directories. Options:"
++    echo "and session"
++    echo "    directories. Options:"
+     echo "        -h    show this help message and exit"
+     echo "        -d    also kill the Python daemon"
+     echo "        -l    remove the core-daemon.log file"
+Index: core-network-4.8/daemon/sbin/core-xen-cleanup
+===================================================================
+--- core-network-4.8.orig/daemon/sbin/core-xen-cleanup
++++ core-network-4.8/daemon/sbin/core-xen-cleanup
+@@ -3,7 +3,8 @@
+ if [ "z$1" = "z-h" -o "z$1" = "z--help" ]; then
+     echo "usage: $0 [-d]"
+     echo -n "    Clean up all CORE Xen domUs, bridges, interfaces, "
+-    echo "and session\n    directories. Options:"
++    echo "and session"
++    echo "    directories. Options:"
+     echo "        -h    show this help message and exit"
+     echo "        -d    also kill the Python daemon"
+     exit 0
+Index: core-network-4.8/scripts/core-daemon-init.d
+===================================================================
+--- core-network-4.8.orig/scripts/core-daemon-init.d
++++ core-network-4.8/scripts/core-daemon-init.d
+@@ -83,7 +83,7 @@ else
+   killproc="killproc -d 10"
+   status=status
+   msg () {
+-    echo -n $"$@"
++    echo -n "$@"
+   }
+   endmsg () {
+     echo ""

@@ -1,12 +1,14 @@
 #!/usr/bin/make -f
 #export DH_VERBOSE=1
 
-%:
-	dh $@  --with autotools-dev --parallel
+export DEB_CFLAGS_MAINT_APPEND  = -fPIE
+export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,now
 
-override_dh_auto_configure:
-	sh bootstrap.sh
-	dh_auto_configure
+%:
+	dh $@ --with autoreconf,python2 --parallel
+
+override_dh_autoreconf:
+	dh_autoreconf ./bootstrap.sh
 
 override_dh_installinit:
 	dh_installinit -p core-network-daemon -o core-daemon --name=core-daemon
