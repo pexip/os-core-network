@@ -1,3 +1,9 @@
+core-network (4.8-1pexip2) pexip; urgency=low
+
+  * Depend on psmisc
+
+ -- John-Mark Bell <jmb@pexip.com>  Mon, 24 Sep 2018 16:30:34 +0100
+
 core-network (4.8-1pexip1) pexip; urgency=low
 
   * New upstream release; migrate to sid

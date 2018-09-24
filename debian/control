@@ -59,6 +59,7 @@ Depends: ${shlibs:Depends},
          bridge-utils,
          ebtables,
          iproute | iproute2,
+         psmisc,
          python
 Recommends: quagga
 Suggests: core-network-gui
