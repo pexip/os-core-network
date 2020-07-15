@@ -1,3 +1,11 @@
+core-network (4.8-1pexip3) pexip; urgency=medium
+
+  * Rebuild in buster environment
+  * Switch build-depends from iproute | iproute2 to simply iproute2 -
+    the old iproute transitional package is gone in buster
+
+ -- Steve McIntyre <steve.mcintyre@pexip.com>  Mon, 27 Jul 2020 14:30:09 +0100
+
 core-network (4.8-1pexip2) pexip; urgency=low
 
   * Depend on psmisc
