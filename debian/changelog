@@ -1,6 +1,12 @@
+core-network (4.8-1pexip4) pexip; urgency=medium
+
+  * Rebuild again in buster. Previous build was done using stretch by
+    mistake
+
+ -- Steve McIntyre <steve.mcintyre@pexip.com>  Mon, 27 Jul 2020 16:34:43 +0100
+
 core-network (4.8-1pexip3) pexip; urgency=medium
 
-  * Rebuild in buster environment
   * Switch build-depends from iproute | iproute2 to simply iproute2 -
     the old iproute transitional package is gone in buster
 
