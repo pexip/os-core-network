@@ -1,3 +1,10 @@
+core-network (8.2.0-1pexip1) pexip; urgency=medium
+
+  * New upstream release.
+  * Now build against upstream source as Debian package no longer exists.
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Thu, 02 Jun 2022 11:56:32 +0100
+
 core-network (4.8-1pexip4) pexip; urgency=medium
 
   * Rebuild again in buster. Previous build was done using stretch by
