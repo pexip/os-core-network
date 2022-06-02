@@ -1,60 +1,52 @@
-#
-# CORE configuration for UCARP 
-# Copyright (c) 2012 Jonathan deBoer
-# See the LICENSE file included in this distribution.
-#
-#
-# author: Jonathan deBoer <jdccdevel@gmail.com>
-#
-'''
+"""
 ucarp.py: defines high-availability IP address controlled by ucarp
-'''
+"""
+from typing import Tuple
 
-import os
+from core.nodes.base import CoreNode
+from core.services.coreservices import CoreService
 
-from core.service import CoreService, addservice
-from core.misc.ipaddr import IPv4Prefix
-from core.constants import *
+UCARP_ETC = "/usr/local/etc/ucarp"
 
-
-UCARP_ETC="/usr/local/etc/ucarp"
 
 class Ucarp(CoreService):
-    ''' 
-    '''
-    _name = "ucarp"
-    _group = "Utility"
-    _depends = ( )
-    _dirs = (UCARP_ETC, )
-    _configs = (UCARP_ETC + "/default.sh", UCARP_ETC + "/default-up.sh", UCARP_ETC + "/default-down.sh", "ucarpboot.sh",)
-    _startindex = 65
-    _startup = ("sh ucarpboot.sh",)
-    _shutdown = ("killall ucarp", )
-    _validate = ("pidof ucarp", )
+    name: str = "ucarp"
+    group: str = "Utility"
+    dirs: Tuple[str, ...] = (UCARP_ETC,)
+    configs: Tuple[str, ...] = (
+        UCARP_ETC + "/default.sh",
+        UCARP_ETC + "/default-up.sh",
+        UCARP_ETC + "/default-down.sh",
+        "ucarpboot.sh",
+    )
+    startup: Tuple[str, ...] = ("bash ucarpboot.sh",)
+    shutdown: Tuple[str, ...] = ("killall ucarp",)
+    validate: Tuple[str, ...] = ("pidof ucarp",)
 
     @classmethod
-    def generateconfig(cls, node, filename, services):
-        ''' Return the default file contents
-        '''
-        if filename == cls._configs[0]:
-            return cls.generateUcarpConf(node, services)
-        elif filename == cls._configs[1]:
-            return cls.generateVipUp(node, services)
-        elif filename == cls._configs[2]:
-            return cls.generateVipDown(node, services)
-        elif filename == cls._configs[3]:
-            return cls.generateUcarpBoot(node, services)
+    def generate_config(cls, node: CoreNode, filename: str) -> str:
+        """
+        Return the default file contents
+        """
+        if filename == cls.configs[0]:
+            return cls.generate_ucarp_conf(node)
+        elif filename == cls.configs[1]:
+            return cls.generate_vip_up(node)
+        elif filename == cls.configs[2]:
+            return cls.generate_vip_down(node)
+        elif filename == cls.configs[3]:
+            return cls.generate_ucarp_boot(node)
         else:
             raise ValueError
-        
+
     @classmethod
-    def generateUcarpConf(cls, node, services):
-        ''' Returns configuration file text. 
-        '''
-        try:
-            ucarp_bin = node.session.cfg['ucarp_bin']
-        except KeyError:
-            ucarp_bin = "/usr/sbin/ucarp"
+    def generate_ucarp_conf(cls, node: CoreNode) -> str:
+        """
+        Returns configuration file text.
+        """
+        ucarp_bin = node.session.options.get_config(
+            "ucarp_bin", default="/usr/sbin/ucarp"
+        )
         return """\
 #!/bin/sh
 # Location of UCARP executable
@@ -111,18 +103,19 @@ STOP_SCRIPT=${UCARP_CFGDIR}/default-down.sh
 # These line should not need to be touched
 UCARP_OPTS="$OPTIONS -b $UCARP_BASE -k $SKEW -i $INTERFACE -v $INSTANCE_ID -p $PASSWORD -u $START_SCRIPT -d $STOP_SCRIPT -a $VIRTUAL_ADDRESS -s $SOURCE_ADDRESS -f $FACILITY $XPARAM"
 
-${UCARP_EXEC} -B ${UCARP_OPTS} 
-""" %  (ucarp_bin, UCARP_ETC)
-    
+${UCARP_EXEC} -B ${UCARP_OPTS}
+""" % (
+            ucarp_bin,
+            UCARP_ETC,
+        )
+
     @classmethod
-    def generateUcarpBoot(cls, node, services):
-        ''' Generate a shell script used to boot the Ucarp daemons.
-        '''
-        try:
-            ucarp_bin = node.session.cfg['ucarp_bin']
-        except KeyError:
-            ucarp_bin = "/usr/sbin/ucarp"
-        return """\
+    def generate_ucarp_boot(cls, node: CoreNode) -> str:
+        """
+        Generate a shell script used to boot the Ucarp daemons.
+        """
+        return (
+            """\
 #!/bin/sh
 # Location of the UCARP config directory
 UCARP_CFGDIR=%s
@@ -132,16 +125,15 @@ chmod a+x ${UCARP_CFGDIR}/*.sh
 # Start the default ucarp daemon configuration
 ${UCARP_CFGDIR}/default.sh
 
-""" % (UCARP_ETC)
+"""
+            % UCARP_ETC
+        )
 
     @classmethod
-    def generateVipUp(cls, node, services):
-        ''' Generate a shell script used to start the virtual ip
-        '''
-        try:
-            ucarp_bin = node.session.cfg['ucarp_bin']
-        except KeyError:
-            ucarp_bin = "/usr/sbin/ucarp"
+    def generate_vip_up(cls, node: CoreNode) -> str:
+        """
+        Generate a shell script used to start the virtual ip
+        """
         return """\
 #!/bin/bash
 
@@ -151,22 +143,19 @@ exec 2> /dev/null
 IP="${2}"
 NET="${3}"
 if [ -z "$NET" ]; then
-	NET="24"
+    NET="24"
 fi
 
 /sbin/ip addr add ${IP}/${NET} dev "$1"
 
 
-""" 
+"""
 
     @classmethod
-    def generateVipDown(cls, node, services):
-        ''' Generate a shell script used to stop the virtual ip
-        '''
-        try:
-            ucarp_bin = node.session.cfg['ucarp_bin']
-        except KeyError:
-            ucarp_bin = "/usr/sbin/ucarp"
+    def generate_vip_down(cls, node: CoreNode) -> str:
+        """
+        Generate a shell script used to stop the virtual ip
+        """
         return """\
 #!/bin/bash
 
@@ -176,14 +165,10 @@ exec 2> /dev/null
 IP="${2}"
 NET="${3}"
 if [ -z "$NET" ]; then
-	NET="24"
+    NET="24"
 fi
 
 /sbin/ip addr del ${IP}/${NET} dev "$1"
 
 
-""" 
-
-
-addservice(Ucarp)
-
+"""

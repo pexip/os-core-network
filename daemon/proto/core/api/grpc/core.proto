@@ -1,0 +1,686 @@
+syntax = "proto3";
+
+package core;
+
+import "core/api/grpc/configservices.proto";
+import "core/api/grpc/common.proto";
+import "core/api/grpc/emane.proto";
+import "core/api/grpc/mobility.proto";
+import "core/api/grpc/services.proto";
+import "core/api/grpc/wlan.proto";
+
+service CoreApi {
+    // session rpc
+    rpc StartSession (StartSessionRequest) returns (StartSessionResponse) {
+    }
+    rpc StopSession (StopSessionRequest) returns (StopSessionResponse) {
+    }
+    rpc CreateSession (CreateSessionRequest) returns (CreateSessionResponse) {
+    }
+    rpc DeleteSession (DeleteSessionRequest) returns (DeleteSessionResponse) {
+    }
+    rpc GetSessions (GetSessionsRequest) returns (GetSessionsResponse) {
+    }
+    rpc GetSession (GetSessionRequest) returns (GetSessionResponse) {
+    }
+    rpc CheckSession (CheckSessionRequest) returns (CheckSessionResponse) {
+    }
+    rpc SessionAlert (SessionAlertRequest) returns (SessionAlertResponse) {
+    }
+
+    // streams
+    rpc Events (EventsRequest) returns (stream Event) {
+    }
+    rpc Throughputs (ThroughputsRequest) returns (stream ThroughputsEvent) {
+    }
+    rpc CpuUsage (CpuUsageRequest) returns (stream CpuUsageEvent) {
+    }
+
+    // node rpc
+    rpc AddNode (AddNodeRequest) returns (AddNodeResponse) {
+    }
+    rpc GetNode (GetNodeRequest) returns (GetNodeResponse) {
+    }
+    rpc EditNode (EditNodeRequest) returns (EditNodeResponse) {
+    }
+    rpc DeleteNode (DeleteNodeRequest) returns (DeleteNodeResponse) {
+    }
+    rpc NodeCommand (NodeCommandRequest) returns (NodeCommandResponse) {
+    }
+    rpc GetNodeTerminal (GetNodeTerminalRequest) returns (GetNodeTerminalResponse) {
+    }
+    rpc MoveNode (MoveNodeRequest) returns (MoveNodeResponse) {
+    }
+    rpc MoveNodes (stream MoveNodesRequest) returns (MoveNodesResponse) {
+    }
+
+    // link rpc
+    rpc AddLink (AddLinkRequest) returns (AddLinkResponse) {
+    }
+    rpc EditLink (EditLinkRequest) returns (EditLinkResponse) {
+    }
+    rpc DeleteLink (DeleteLinkRequest) returns (DeleteLinkResponse) {
+    }
+
+    // mobility rpc
+    rpc GetMobilityConfig (mobility.GetMobilityConfigRequest) returns (mobility.GetMobilityConfigResponse) {
+    }
+    rpc SetMobilityConfig (mobility.SetMobilityConfigRequest) returns (mobility.SetMobilityConfigResponse) {
+    }
+    rpc MobilityAction (mobility.MobilityActionRequest) returns (mobility.MobilityActionResponse) {
+    }
+
+    // service rpc
+    rpc GetServiceDefaults (services.GetServiceDefaultsRequest) returns (services.GetServiceDefaultsResponse) {
+    }
+    rpc SetServiceDefaults (services.SetServiceDefaultsRequest) returns (services.SetServiceDefaultsResponse) {
+    }
+    rpc GetNodeService (services.GetNodeServiceRequest) returns (services.GetNodeServiceResponse) {
+    }
+    rpc GetNodeServiceFile (services.GetNodeServiceFileRequest) returns (services.GetNodeServiceFileResponse) {
+    }
+    rpc ServiceAction (services.ServiceActionRequest) returns (services.ServiceActionResponse) {
+    }
+
+    // config services
+    rpc GetConfigServiceDefaults (configservices.GetConfigServiceDefaultsRequest) returns (configservices.GetConfigServiceDefaultsResponse) {
+    }
+    rpc GetNodeConfigService (configservices.GetNodeConfigServiceRequest) returns (configservices.GetNodeConfigServiceResponse) {
+    }
+    rpc ConfigServiceAction (services.ServiceActionRequest) returns (services.ServiceActionResponse) {
+    }
+
+    // wlan rpc
+    rpc GetWlanConfig (wlan.GetWlanConfigRequest) returns (wlan.GetWlanConfigResponse) {
+    }
+    rpc SetWlanConfig (wlan.SetWlanConfigRequest) returns (wlan.SetWlanConfigResponse) {
+    }
+    rpc WlanLink (wlan.WlanLinkRequest) returns (wlan.WlanLinkResponse) {
+    }
+
+    // emane rpc
+    rpc GetEmaneModelConfig (emane.GetEmaneModelConfigRequest) returns (emane.GetEmaneModelConfigResponse) {
+    }
+    rpc SetEmaneModelConfig (emane.SetEmaneModelConfigRequest) returns (emane.SetEmaneModelConfigResponse) {
+    }
+    rpc GetEmaneEventChannel (emane.GetEmaneEventChannelRequest) returns (emane.GetEmaneEventChannelResponse) {
+    }
+    rpc EmanePathlosses (stream emane.EmanePathlossesRequest) returns (emane.EmanePathlossesResponse) {
+    }
+    rpc EmaneLink (emane.EmaneLinkRequest) returns (emane.EmaneLinkResponse) {
+    }
+
+    // xml rpc
+    rpc SaveXml (SaveXmlRequest) returns (SaveXmlResponse) {
+    }
+    rpc OpenXml (OpenXmlRequest) returns (OpenXmlResponse) {
+    }
+
+    // utilities
+    rpc GetInterfaces (GetInterfacesRequest) returns (GetInterfacesResponse) {
+    }
+    rpc ExecuteScript (ExecuteScriptRequest) returns (ExecuteScriptResponse) {
+    }
+
+    // globals
+    rpc GetConfig (GetConfigRequest) returns (GetConfigResponse) {
+    }
+}
+
+// rpc request/response messages
+message GetConfigRequest {
+}
+
+message GetConfigResponse {
+    repeated services.Service services = 1;
+    repeated configservices.ConfigService config_services = 2;
+    repeated string emane_models = 3;
+}
+
+
+message StartSessionRequest {
+    Session session = 1;
+    bool definition = 2;
+}
+
+message StartSessionResponse {
+    bool result = 1;
+    repeated string exceptions = 2;
+}
+
+message StopSessionRequest {
+    int32 session_id = 1;
+}
+
+message StopSessionResponse {
+    bool result = 1;
+}
+
+message CreateSessionRequest {
+    int32 session_id = 1;
+}
+
+message CreateSessionResponse {
+    Session session = 1;
+}
+
+message DeleteSessionRequest {
+    int32 session_id = 1;
+}
+
+message DeleteSessionResponse {
+    bool result = 1;
+}
+
+message GetSessionsRequest {
+}
+
+message GetSessionsResponse {
+    repeated SessionSummary sessions = 1;
+}
+
+message CheckSessionRequest {
+    int32 session_id = 1;
+}
+
+message CheckSessionResponse {
+    bool result = 1;
+}
+
+message GetSessionRequest {
+    int32 session_id = 1;
+}
+
+message GetSessionResponse {
+    Session session = 1;
+}
+
+message SessionAlertRequest {
+    int32 session_id = 1;
+    ExceptionLevel.Enum level = 2;
+    string source = 3;
+    string text = 4;
+    int32 node_id = 5;
+}
+
+message SessionAlertResponse {
+    bool result = 1;
+}
+
+message EventsRequest {
+    int32 session_id = 1;
+    repeated EventType.Enum events = 2;
+}
+
+message ThroughputsRequest {
+    int32 session_id = 1;
+}
+
+message ThroughputsEvent {
+    int32 session_id = 1;
+    repeated BridgeThroughput bridge_throughputs = 2;
+    repeated InterfaceThroughput iface_throughputs = 3;
+}
+
+message CpuUsageRequest {
+    int32 delay = 1;
+}
+
+message CpuUsageEvent {
+    double usage = 1;
+}
+
+message InterfaceThroughput {
+    int32 node_id = 1;
+    int32 iface_id = 2;
+    double throughput = 3;
+}
+
+message BridgeThroughput {
+    int32 node_id = 1;
+    double throughput = 2;
+}
+
+message Event {
+    oneof event_type {
+        SessionEvent session_event = 1;
+        NodeEvent node_event = 2;
+        LinkEvent link_event = 3;
+        ConfigEvent config_event = 4;
+        ExceptionEvent exception_event = 5;
+        FileEvent file_event = 6;
+    }
+    int32 session_id = 7;
+    string source = 8;
+}
+
+message NodeEvent {
+    Node node = 1;
+    MessageType.Enum message_type = 2;
+}
+
+message LinkEvent {
+    MessageType.Enum message_type = 1;
+    Link link = 2;
+}
+
+message SessionEvent {
+    int32 node_id = 1;
+    int32 event = 2;
+    string name = 3;
+    string data = 4;
+    float time = 5;
+}
+
+message ConfigEvent {
+    MessageType.Enum message_type = 1;
+    int32 node_id = 2;
+    string object = 3;
+    int32 type = 4;
+    repeated int32 data_types = 5;
+    string data_values = 6;
+    string captions = 7;
+    string bitmap = 8;
+    string possible_values = 9;
+    string groups = 10;
+    int32 iface_id = 11;
+    int32 network_id = 12;
+    string opaque = 13;
+}
+
+message ExceptionEvent {
+    int32 node_id = 1;
+    ExceptionLevel.Enum level = 2;
+    string source = 3;
+    string date = 4;
+    string text = 5;
+    string opaque = 6;
+}
+
+message FileEvent {
+    MessageType.Enum message_type = 1;
+    int32 node_id = 2;
+    string name = 3;
+    string mode = 4;
+    int32 number = 5;
+    string type = 6;
+    string source = 7;
+    string data = 8;
+    string compressed_data = 9;
+}
+
+message AddNodeRequest {
+    int32 session_id = 1;
+    Node node = 2;
+    string source = 3;
+}
+
+message AddNodeResponse {
+    int32 node_id = 1;
+}
+
+message GetNodeRequest {
+    int32 session_id = 1;
+    int32 node_id = 2;
+}
+
+message GetNodeResponse {
+    Node node = 1;
+    repeated Interface ifaces = 2;
+    repeated Link links = 3;
+}
+
+message EditNodeRequest {
+    int32 session_id = 1;
+    int32 node_id = 2;
+    string icon = 3;
+    string source = 4;
+}
+
+message EditNodeResponse {
+    bool result = 1;
+}
+
+message DeleteNodeRequest {
+    int32 session_id = 1;
+    int32 node_id = 2;
+    string source = 3;
+}
+
+message DeleteNodeResponse {
+    bool result = 1;
+}
+
+message GetNodeTerminalRequest {
+    int32 session_id = 1;
+    int32 node_id = 2;
+}
+
+message GetNodeTerminalResponse {
+    string terminal = 1;
+}
+
+
+message MoveNodeRequest {
+    int32 session_id = 1;
+    int32 node_id = 2;
+    string source = 3;
+    oneof move_type {
+        Position position = 4;
+        Geo geo = 5;
+    }
+}
+
+message MoveNodeResponse {
+    bool result = 1;
+}
+
+message MoveNodesRequest {
+    int32 session_id = 1;
+    int32 node_id = 2;
+    string source = 3;
+    oneof move_type {
+        Position position = 4;
+        Geo geo = 5;
+    }
+}
+
+message MoveNodesResponse {
+}
+
+message NodeCommandRequest {
+    int32 session_id = 1;
+    int32 node_id = 2;
+    string command = 3;
+    bool wait = 4;
+    bool shell = 5;
+}
+
+message NodeCommandResponse {
+    string output = 1;
+    int32 return_code = 2;
+}
+
+message AddLinkRequest {
+    int32 session_id = 1;
+    Link link = 2;
+    string source = 3;
+}
+
+message AddLinkResponse {
+    bool result = 1;
+    Interface iface1 = 2;
+    Interface iface2 = 3;
+}
+
+message EditLinkRequest {
+    int32 session_id = 1;
+    int32 node1_id = 2;
+    int32 node2_id = 3;
+    int32 iface1_id = 4;
+    int32 iface2_id = 5;
+    LinkOptions options = 6;
+    string source = 7;
+}
+
+message EditLinkResponse {
+    bool result = 1;
+}
+
+message DeleteLinkRequest {
+    int32 session_id = 1;
+    int32 node1_id = 2;
+    int32 node2_id = 3;
+    int32 iface1_id = 4;
+    int32 iface2_id = 5;
+    string source = 6;
+}
+
+message DeleteLinkResponse {
+    bool result = 1;
+}
+
+message SaveXmlRequest {
+    int32 session_id = 1;
+}
+
+message SaveXmlResponse {
+    string data = 1;
+}
+
+message OpenXmlRequest {
+    string data = 1;
+    bool start = 2;
+    string file = 3;
+}
+
+message OpenXmlResponse {
+    bool result = 1;
+    int32 session_id = 2;
+}
+
+message GetInterfacesRequest {
+}
+
+message GetInterfacesResponse {
+    repeated string ifaces = 1;
+}
+
+message ExecuteScriptRequest {
+    string script = 1;
+    string args = 2;
+}
+
+message ExecuteScriptResponse {
+    int32 session_id = 1;
+}
+
+// data structures for messages below
+message EventType {
+    enum Enum {
+        SESSION = 0;
+        NODE = 1;
+        LINK = 2;
+        CONFIG = 3;
+        EXCEPTION = 4;
+        FILE = 5;
+    }
+}
+
+message MessageType {
+    enum Enum {
+        NONE = 0;
+        ADD = 1;
+        DELETE = 2;
+        CRI = 4;
+        LOCAL = 8;
+        STRING = 16;
+        TEXT = 32;
+        TTY = 64;
+    }
+}
+
+message LinkType {
+    enum Enum {
+        WIRELESS = 0;
+        WIRED = 1;
+    }
+}
+
+message SessionState {
+    enum Enum {
+        NONE = 0;
+        DEFINITION = 1;
+        CONFIGURATION = 2;
+        INSTANTIATION = 3;
+        RUNTIME = 4;
+        DATACOLLECT = 5;
+        SHUTDOWN = 6;
+    }
+}
+
+message NodeType {
+    enum Enum {
+        DEFAULT = 0;
+        PHYSICAL = 1;
+        SWITCH = 4;
+        HUB = 5;
+        WIRELESS_LAN = 6;
+        RJ45 = 7;
+        TUNNEL = 8;
+        EMANE = 10;
+        TAP_BRIDGE = 11;
+        PEER_TO_PEER = 12;
+        CONTROL_NET = 13;
+        DOCKER = 15;
+        LXC = 16;
+    }
+}
+
+message ConfigOptionType {
+    enum Enum {
+        NONE = 0;
+        UINT8 = 1;
+        UINT16 = 2;
+        UINT32 = 3;
+        UINT64 = 4;
+        INT8 = 5;
+        INT16 = 6;
+        INT32 = 7;
+        INT64 = 8;
+        FLOAT = 9;
+        STRING = 10;
+        BOOL = 11;
+    }
+}
+
+message ExceptionLevel {
+    enum Enum {
+        DEFAULT = 0;
+        FATAL = 1;
+        ERROR = 2;
+        WARNING = 3;
+        NOTICE = 4;
+    }
+}
+
+message Hook {
+    SessionState.Enum state = 1;
+    string file = 2;
+    string data = 3;
+}
+
+message Session {
+    int32 id = 1;
+    SessionState.Enum state = 2;
+    repeated Node nodes = 3;
+    repeated Link links = 4;
+    string dir = 5;
+    string user = 6;
+    repeated services.ServiceDefaults default_services = 7;
+    SessionLocation location = 8;
+    repeated Hook hooks = 9;
+    map<string, string> metadata = 10;
+    string file = 11;
+    map<string, common.ConfigOption> options = 12;
+    repeated Server servers = 13;
+}
+
+message SessionSummary {
+    int32 id = 1;
+    SessionState.Enum state = 2;
+    int32 nodes = 3;
+    string file = 4;
+    string dir = 5;
+}
+
+message Node {
+    int32 id = 1;
+    string name = 2;
+    NodeType.Enum type = 3;
+    string model = 4;
+    Position position = 5;
+    repeated string services = 6;
+    string emane = 7;
+    string icon = 8;
+    string image = 9;
+    string server = 10;
+    repeated string config_services = 11;
+    Geo geo = 12;
+    string dir = 13;
+    string channel = 14;
+    int32 canvas = 15;
+    map<string, common.ConfigOption> wlan_config = 16;
+    map<string, common.ConfigOption> mobility_config = 17;
+    map<string, services.NodeServiceConfig> service_configs = 18;
+    map<string, configservices.ConfigServiceConfig> config_service_configs= 19;
+    repeated emane.NodeEmaneConfig emane_configs = 20;
+}
+
+message Link {
+    int32 node1_id = 1;
+    int32 node2_id = 2;
+    LinkType.Enum type = 3;
+    Interface iface1 = 4;
+    Interface iface2 = 5;
+    LinkOptions options = 6;
+    int32 network_id = 7;
+    string label = 8;
+    string color = 9;
+}
+
+message LinkOptions {
+    int64 jitter = 1;
+    int32 key = 2;
+    int32 mburst = 3;
+    int32 mer = 4;
+    float loss = 5;
+    int64 bandwidth = 6;
+    int32 burst = 7;
+    int64 delay = 8;
+    int32 dup = 9;
+    bool unidirectional = 10;
+    int32 buffer = 11;
+}
+
+message Interface {
+    int32 id = 1;
+    string name = 2;
+    string mac = 3;
+    string ip4 = 4;
+    int32 ip4_mask = 5;
+    string ip6 = 6;
+    int32 ip6_mask = 7;
+    int32 net_id = 8;
+    int32 flow_id = 9;
+    int32 mtu = 10;
+    int32 node_id = 11;
+    int32 net2_id = 12;
+}
+
+message SessionLocation {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+    float lat = 4;
+    float lon = 5;
+    float alt = 6;
+    float scale = 7;
+}
+
+message Position {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+message Geo {
+    float lat = 1;
+    float lon = 2;
+    float alt = 3;
+}
+
+message Server {
+    string name = 1;
+    string host = 2;
+}
