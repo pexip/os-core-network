@@ -17,7 +17,7 @@ Build-Depends: debhelper (>= 9),
                net-tools | freebsd-net-tools,
                pkg-config,
                procps,
-               python-dev
+               python3-dev
 Standards-Version: 3.9.6
 Homepage: http://www.nrl.navy.mil/itd/ncs/products/core
 Vcs-Git: git://anonscm.debian.org/collab-maint/core-network.git
@@ -60,7 +60,7 @@ Depends: ${shlibs:Depends},
          ebtables,
          iproute | iproute2,
          psmisc,
-         python
+         python3
 Recommends: quagga
 Suggests: core-network-gui
 Description: intuitive network emulator that interacts with real nets (daemon)
