@@ -51,7 +51,7 @@ node n1 {
 	cmdup=('sh mgen.sh', )
 	}
     }
-    services {zebra OSPFv2 OSPFv3 vtysh IPForward UserDefined}
+    services {zebra OSPFv2 OSPFv3 IPForward UserDefined}
 }
 
 node n2 {
@@ -86,11 +86,7 @@ node n2 {
 	HN=`hostname`
 	SCRIPTDIR=$SESSION_DIR
 	LOGDIR=/var/log
-	
-	if [ `uname` = "FreeBSD" ]; then
-	  SCRIPTDIR=/tmp/e0_$HN
-	  LOGDIR=$SCRIPTDIR
-	fi
+
 	cd $SCRIPTDIR
 	(
 	cat << 'EOF'
@@ -101,7 +97,7 @@ node n2 {
 	mgen input send_$HN.mgn output $LOGDIR/mgen_$HN.log > /dev/null 2> /dev/null < /dev/null &
 	}
     }
-    services {zebra OSPFv2 OSPFv3 vtysh IPForward UserDefined}
+    services {zebra OSPFv2 OSPFv3 IPForward UserDefined}
 }
 
 link l1 {

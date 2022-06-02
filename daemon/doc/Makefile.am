@@ -8,9 +8,9 @@
 #
 
 # extra cruft to remove
-DISTCLEANFILES	= conf.py Makefile.in stamp-vti *.rst
+DISTCLEANFILES	= conf.py Makefile Makefile.in stamp-vti *.rst
 
-all:	index.rst
+all: html
 
 # auto-generated Python documentation using Sphinx
 index.rst:
@@ -23,7 +23,7 @@ index.rst:
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
+SPHINXOPTS    = -q
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build
