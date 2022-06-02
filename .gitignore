@@ -1,0 +1,60 @@
+.debbuild
+.deps
+.rpmbuild
+.version
+.version.date
+Makefile
+!kernel/**/Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache
+/config
+config.h
+config.h.in
+config.log
+config.status
+configure
+debian
+stamp-h1
+
+# generated protobuf files
+*_pb2.py
+*_pb2_grpc.py
+
+# python build directory
+dist
+
+# vscode
+.vscode
+
+# intellij
+*.iml
+.idea
+
+# sonarqube sonar-scanner
+.scannerwork
+
+# ignore test coverage files
+coverage.xml
+
+# python files
+*.egg-info
+*.pyc
+
+# ignore package files
+*.rpm
+*.deb
+*.tar.gz
+
+# pytest cache files
+.cache
+
+# ignore swap files
+*.swp
+
+# ignore built input files
+netns/setup.py
+daemon/setup.py
+
+# python
+__pycache__
