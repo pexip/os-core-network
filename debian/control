@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Pexip AS <packaging@pexip.com>
 XBCS-Pexip-Original-Maintainer: Joao Eriberto Mota Filho <eriberto@debian.org>
 XBCS-Pexip-Original-Uploaders: Jeffrey M. Ahrenholz <ahrenholz@gmail.com>
-Build-Depends: debhelper (>= 9),
+Build-Depends: debhelper-compat (= 13),
                dh-autoreconf,
                bridge-utils,
                dh-python,
@@ -17,7 +17,7 @@ Build-Depends: debhelper (>= 9),
                net-tools | freebsd-net-tools,
                pkg-config,
                procps,
-               python-dev
+               python3-all-dev
 Standards-Version: 3.9.6
 Homepage: http://www.nrl.navy.mil/itd/ncs/products/core
 Vcs-Git: git://anonscm.debian.org/collab-maint/core-network.git

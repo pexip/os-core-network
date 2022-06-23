@@ -5,7 +5,7 @@ export DEB_CFLAGS_MAINT_APPEND  = -fPIE
 export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,now
 
 %:
-	dh $@ --with autoreconf,python2 --parallel
+	dh $@ --with autoreconf,python3 --parallel
 
 override_dh_autoreconf:
 	dh_autoreconf ./bootstrap.sh
