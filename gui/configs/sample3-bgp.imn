@@ -20,7 +20,7 @@ node n1 {
     interface-peer {eth1 n2}
     interface-peer {eth2 n3}
     canvas c1
-    services {zebra BGP vtysh IPForward}
+    services {zebra BGP IPForward}
     custom-config {
 	custom-config-id service:zebra:/usr/local/etc/quagga/Quagga.conf
 	custom-command /usr/local/etc/quagga/Quagga.conf
@@ -44,18 +44,6 @@ node n1 {
 	 neighbor 10.0.8.1 remote-as 2901
 	 neighbor 10.0.8.1 next-hop-self
 	!
-	}
-    }
-    custom-config {
-	custom-config-id service:zebra
-	custom-command zebra
-	config {
-	('/usr/local/etc/quagga', '/var/run/quagga')
-	('/usr/local/etc/quagga/Quagga.conf', 'quaggaboot.sh')
-	35
-	('sh quaggaboot.sh zebra',)
-	('killall zebra',)
-	
 	}
     }
 }
@@ -82,7 +70,7 @@ node n2 {
     interface-peer {eth1 n16}
     interface-peer {eth2 n6}
     canvas c1
-    services {zebra BGP vtysh IPForward}
+    services {zebra BGP IPForward}
     custom-config {
 	custom-config-id service:zebra:/usr/local/etc/quagga/Quagga.conf
 	custom-command /usr/local/etc/quagga/Quagga.conf
@@ -108,18 +96,6 @@ node n2 {
 	!
 	}
     }
-    custom-config {
-	custom-config-id service:zebra
-	custom-command zebra
-	config {
-	('/usr/local/etc/quagga', '/var/run/quagga')
-	('/usr/local/etc/quagga/Quagga.conf', 'quaggaboot.sh')
-	35
-	('sh quaggaboot.sh zebra',)
-	('killall zebra',)
-	
-	}
-    }
 }
 
 node n3 {
@@ -140,7 +116,7 @@ node n3 {
     interface-peer {eth0 n4}
     interface-peer {eth1 n1}
     canvas c1
-    services {zebra BGP vtysh IPForward}
+    services {zebra BGP IPForward}
     custom-config {
 	custom-config-id service:zebra:/usr/local/etc/quagga/Quagga.conf
 	custom-command /usr/local/etc/quagga/Quagga.conf
@@ -159,18 +135,6 @@ node n3 {
 	 neighbor 10.0.8.2 remote-as 105
 	 neighbor 10.0.8.2 next-hop-self
 	!
-	}
-    }
-    custom-config {
-	custom-config-id service:zebra
-	custom-command zebra
-	config {
-	('/usr/local/etc/quagga', '/var/run/quagga')
-	('/usr/local/etc/quagga/Quagga.conf', 'quaggaboot.sh')
-	35
-	('sh quaggaboot.sh zebra',)
-	('killall zebra',)
-	
 	}
     }
 }
@@ -197,7 +161,7 @@ node n4 {
     interface-peer {eth0 n3}
     interface-peer {eth1 n7}
     canvas c1
-    services {zebra BGP vtysh IPForward}
+    services {zebra BGP IPForward}
     custom-config {
 	custom-config-id service:zebra:/usr/local/etc/quagga/Quagga.conf
 	custom-command /usr/local/etc/quagga/Quagga.conf
@@ -220,18 +184,6 @@ node n4 {
 	 neighbor 10.0.10.2 next-hop-self
 	 network 10.0.0.0 mask 255.255.255.0
 	!
-	}
-    }
-    custom-config {
-	custom-config-id service:zebra
-	custom-command zebra
-	config {
-	('/usr/local/etc/quagga', '/var/run/quagga')
-	('/usr/local/etc/quagga/Quagga.conf', 'quaggaboot.sh')
-	35
-	('sh quaggaboot.sh zebra',)
-	('killall zebra',)
-	
 	}
     }
 }
@@ -258,7 +210,7 @@ node n5 {
     interface-peer {eth0 n7}
     interface-peer {eth1 n6}
     canvas c1
-    services {zebra BGP vtysh IPForward}
+    services {zebra BGP IPForward}
     custom-config {
 	custom-config-id service:zebra:/usr/local/etc/quagga/Quagga.conf
 	custom-command /usr/local/etc/quagga/Quagga.conf
@@ -281,18 +233,6 @@ node n5 {
 	 neighbor 10.0.3.1 next-hop-self
 	 network 10.0.1.0 mask 255.255.255.0
 	!
-	}
-    }
-    custom-config {
-	custom-config-id service:zebra
-	custom-command zebra
-	config {
-	('/usr/local/etc/quagga', '/var/run/quagga')
-	('/usr/local/etc/quagga/Quagga.conf', 'quaggaboot.sh')
-	35
-	('sh quaggaboot.sh zebra',)
-	('killall zebra',)
-	
 	}
     }
 }
@@ -323,7 +263,7 @@ node n6 {
     interface-peer {eth0 n5}
     interface-peer {eth1 n2}
     canvas c1
-    services {zebra BGP vtysh IPForward}
+    services {zebra BGP IPForward}
     custom-config {
 	custom-config-id service:zebra:/usr/local/etc/quagga/Quagga.conf
 	custom-command /usr/local/etc/quagga/Quagga.conf
@@ -342,18 +282,6 @@ node n6 {
 	 neighbor 10.0.9.1 remote-as 105
 	 neighbor 10.0.9.1 next-hop-self
 	!
-	}
-    }
-    custom-config {
-	custom-config-id service:zebra
-	custom-command zebra
-	config {
-	('/usr/local/etc/quagga', '/var/run/quagga')
-	('/usr/local/etc/quagga/Quagga.conf', 'quaggaboot.sh')
-	35
-	('sh quaggaboot.sh zebra',)
-	('killall zebra',)
-	
 	}
     }
 }
@@ -376,7 +304,7 @@ node n7 {
     interface-peer {eth0 n5}
     interface-peer {eth1 n4}
     canvas c1
-    services {zebra BGP vtysh IPForward}
+    services {zebra BGP IPForward}
     custom-config {
 	custom-config-id service:zebra:/usr/local/etc/quagga/Quagga.conf
 	custom-command /usr/local/etc/quagga/Quagga.conf
@@ -395,18 +323,6 @@ node n7 {
 	 neighbor 10.0.10.1 remote-as 2901
 	 neighbor 10.0.10.1 next-hop-self
 	!
-	}
-    }
-    custom-config {
-	custom-config-id service:zebra
-	custom-command zebra
-	config {
-	('/usr/local/etc/quagga', '/var/run/quagga')
-	('/usr/local/etc/quagga/Quagga.conf', 'quaggaboot.sh')
-	35
-	('sh quaggaboot.sh zebra',)
-	('killall zebra',)
-	
 	}
     }
 }
@@ -555,7 +471,7 @@ node n16 {
     interface-peer {eth0 n1}
     interface-peer {eth1 n2}
     canvas c1
-    services {zebra BGP vtysh IPForward}
+    services {zebra BGP IPForward}
     custom-config {
 	custom-config-id service:zebra:/usr/local/etc/quagga/Quagga.conf
 	custom-command /usr/local/etc/quagga/Quagga.conf
@@ -574,18 +490,6 @@ node n16 {
 	 neighbor 10.0.5.2 remote-as 105
 	 neighbor 10.0.5.2 next-hop-self
 	!
-	}
-    }
-    custom-config {
-	custom-config-id service:zebra
-	custom-command zebra
-	config {
-	('/usr/local/etc/quagga', '/var/run/quagga')
-	('/usr/local/etc/quagga/Quagga.conf', 'quaggaboot.sh')
-	35
-	('sh quaggaboot.sh zebra',)
-	('killall zebra',)
-	
 	}
     }
 }
@@ -751,4 +655,3 @@ option global {
     annotations yes
     grid yes
 }
-

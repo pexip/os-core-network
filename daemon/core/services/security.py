@@ -1,129 +1,165 @@
-#
-# CORE - define security services : vpnclient, vpnserver, ipsec and firewall
-#
-# Copyright (c)2011-2012 the Boeing Company.
-# See the LICENSE file included in this distribution.
-#
-''' 
-security.py: defines security services (vpnclient, vpnserver, ipsec and 
+"""
+security.py: defines security services (vpnclient, vpnserver, ipsec and
 firewall)
-'''
+"""
 
-import os
+import logging
+from typing import Tuple
 
-from core.service import CoreService, addservice
-from core.constants import *
+from core import constants
+from core.nodes.base import CoreNode
+from core.nodes.interface import CoreInterface
+from core.services.coreservices import CoreService
+
+logger = logging.getLogger(__name__)
+
 
 class VPNClient(CoreService):
-    ''' 
-    '''
-    _name = "VPNClient"
-    _group = "Security"
-    _configs = ('vpnclient.sh', )
-    _startindex = 60
-    _startup = ('sh vpnclient.sh',)
-    _shutdown = ("killall openvpn",)
-    _validate = ("pidof openvpn", )
-    _custom_needed = True
+    name: str = "VPNClient"
+    group: str = "Security"
+    configs: Tuple[str, ...] = ("vpnclient.sh",)
+    startup: Tuple[str, ...] = ("bash vpnclient.sh",)
+    shutdown: Tuple[str, ...] = ("killall openvpn",)
+    validate: Tuple[str, ...] = ("pidof openvpn",)
+    custom_needed: bool = True
 
     @classmethod
-    def generateconfig(cls, node, filename, services):
-        ''' Return the client.conf and vpnclient.sh file contents to
-        '''
+    def generate_config(cls, node: CoreNode, filename: str) -> str:
+        """
+        Return the client.conf and vpnclient.sh file contents to
+        """
         cfg = "#!/bin/sh\n"
         cfg += "# custom VPN Client configuration for service (security.py)\n"
-        fname = "%s/examples/services/sampleVPNClient" % CORE_DATA_DIR
+        fname = f"{constants.CORE_DATA_DIR}/examples/services/sampleVPNClient"
         try:
-            cfg += open(fname, "rb").read()
-        except e:
-            print "Error opening VPN client configuration template (%s): %s" % \
-                    (fname, e)
+            with open(fname, "r") as f:
+                cfg += f.read()
+        except IOError:
+            logger.exception(
+                "error opening VPN client configuration template (%s)", fname
+            )
         return cfg
 
-# this line is required to add the above class to the list of available services
-addservice(VPNClient)
 
 class VPNServer(CoreService):
-    ''' 
-    '''
-    _name = "VPNServer"
-    _group = "Security"
-    _configs = ('vpnserver.sh', )
-    _startindex = 50
-    _startup = ('sh vpnserver.sh',)
-    _shutdown = ("killall openvpn",)
-    _validate = ("pidof openvpn", )
-    _custom_needed = True
+    name: str = "VPNServer"
+    group: str = "Security"
+    configs: Tuple[str, ...] = ("vpnserver.sh",)
+    startup: Tuple[str, ...] = ("bash vpnserver.sh",)
+    shutdown: Tuple[str, ...] = ("killall openvpn",)
+    validate: Tuple[str, ...] = ("pidof openvpn",)
+    custom_needed: bool = True
 
     @classmethod
-    def generateconfig(cls, node, filename, services):
-        ''' Return the sample server.conf and vpnserver.sh file contents to
-            GUI for user customization.
-        '''
+    def generate_config(cls, node: CoreNode, filename: str) -> str:
+        """
+        Return the sample server.conf and vpnserver.sh file contents to
+        GUI for user customization.
+        """
         cfg = "#!/bin/sh\n"
         cfg += "# custom VPN Server Configuration for service (security.py)\n"
-        fname = "%s/examples/services/sampleVPNServer" % CORE_DATA_DIR
+        fname = f"{constants.CORE_DATA_DIR}/examples/services/sampleVPNServer"
         try:
-            cfg += open(fname, "rb").read()
-        except e:
-            print "Error opening VPN server configuration template (%s): %s" % \
-                    (fname, e)
+            with open(fname, "r") as f:
+                cfg += f.read()
+        except IOError:
+            logger.exception(
+                "Error opening VPN server configuration template (%s)", fname
+            )
         return cfg
 
-addservice(VPNServer)
 
 class IPsec(CoreService):
-    '''
-    '''
-    _name = "IPsec"
-    _group = "Security"
-    _configs = ('ipsec.sh', )
-    _startindex = 60
-    _startup = ('sh ipsec.sh',)
-    _shutdown = ("killall racoon",)
-    _custom_needed = True
+    name: str = "IPsec"
+    group: str = "Security"
+    configs: Tuple[str, ...] = ("ipsec.sh",)
+    startup: Tuple[str, ...] = ("bash ipsec.sh",)
+    shutdown: Tuple[str, ...] = ("killall racoon",)
+    custom_needed: bool = True
 
     @classmethod
-    def generateconfig(cls, node, filename, services):
-        ''' Return the ipsec.conf and racoon.conf file contents to
-            GUI for user customization.
-        '''
+    def generate_config(cls, node: CoreNode, filename: str) -> str:
+        """
+        Return the ipsec.conf and racoon.conf file contents to
+        GUI for user customization.
+        """
         cfg = "#!/bin/sh\n"
         cfg += "# set up static tunnel mode security assocation for service "
         cfg += "(security.py)\n"
-        fname = "%s/examples/services/sampleIPsec" % CORE_DATA_DIR
+        fname = f"{constants.CORE_DATA_DIR}/examples/services/sampleIPsec"
         try:
-            cfg += open(fname, "rb").read()
-        except e:
-            print "Error opening IPsec configuration template (%s): %s" % \
-                    (fname, e)
+            with open(fname, "r") as f:
+                cfg += f.read()
+        except IOError:
+            logger.exception("Error opening IPsec configuration template (%s)", fname)
         return cfg
 
-addservice(IPsec)
 
 class Firewall(CoreService):
-    ''' 
-    '''
-    _name = "Firewall"
-    _group = "Security"
-    _configs = ('firewall.sh', )
-    _startindex = 20
-    _startup = ('sh firewall.sh',)
-    _custom_needed = True
+    name: str = "Firewall"
+    group: str = "Security"
+    configs: Tuple[str, ...] = ("firewall.sh",)
+    startup: Tuple[str, ...] = ("bash firewall.sh",)
+    custom_needed: bool = True
 
     @classmethod
-    def generateconfig(cls, node, filename, services):
-        ''' Return the firewall rule examples to GUI for user customization.
-        '''
+    def generate_config(cls, node: CoreNode, filename: str) -> str:
+        """
+        Return the firewall rule examples to GUI for user customization.
+        """
         cfg = "#!/bin/sh\n"
         cfg += "# custom node firewall rules for service (security.py)\n"
-        fname = "%s/examples/services/sampleFirewall" % CORE_DATA_DIR
+        fname = f"{constants.CORE_DATA_DIR}/examples/services/sampleFirewall"
         try:
-            cfg += open(fname, "rb").read()
-        except e:
-            print "Error opening Firewall configuration template (%s): %s" % \
-                    (fname, e)
+            with open(fname, "r") as f:
+                cfg += f.read()
+        except IOError:
+            logger.exception(
+                "Error opening Firewall configuration template (%s)", fname
+            )
         return cfg
 
-addservice(Firewall)
 
+class Nat(CoreService):
+    """
+    IPv4 source NAT service.
+    """
+
+    name: str = "NAT"
+    group: str = "Security"
+    executables: Tuple[str, ...] = ("iptables",)
+    configs: Tuple[str, ...] = ("nat.sh",)
+    startup: Tuple[str, ...] = ("bash nat.sh",)
+    custom_needed: bool = False
+
+    @classmethod
+    def generate_iface_nat_rule(cls, iface: CoreInterface, prefix: str = "") -> str:
+        """
+        Generate a NAT line for one interface.
+        """
+        cfg = prefix + "iptables -t nat -A POSTROUTING -o "
+        cfg += iface.name + " -j MASQUERADE\n"
+        cfg += prefix + "iptables -A FORWARD -i " + iface.name
+        cfg += " -m state --state RELATED,ESTABLISHED -j ACCEPT\n"
+        cfg += prefix + "iptables -A FORWARD -i "
+        cfg += iface.name + " -j DROP\n"
+        return cfg
+
+    @classmethod
+    def generate_config(cls, node: CoreNode, filename: str) -> str:
+        """
+        NAT out the first interface
+        """
+        cfg = "#!/bin/sh\n"
+        cfg += "# generated by security.py\n"
+        cfg += "# NAT out the first interface by default\n"
+        have_nat = False
+        for iface in node.get_ifaces(control=False):
+            if have_nat:
+                cfg += cls.generate_iface_nat_rule(iface, prefix="#")
+            else:
+                have_nat = True
+                cfg += "# NAT out the " + iface.name + " interface\n"
+                cfg += cls.generate_iface_nat_rule(iface)
+                cfg += "\n"
+        return cfg

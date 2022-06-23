@@ -345,16 +345,10 @@ node n1 {
 	custom-config-id service:IPsec
 	custom-command IPsec
 	config {
-	
-	('ipsec.sh', 'test1.key', 'test1.pem', 'ca-cert.pem', 'copycerts.sh', )
-	60
-	('sh copycerts.sh', 'sh ipsec.sh', )
-	('killall racoon', )
-	
-	
+	files=('ipsec.sh', 'test1.key', 'test1.pem', 'ca-cert.pem', 'copycerts.sh', )
 	}
     }
-    services {zebra OSPFv2 OSPFv3 vtysh IPForward IPsec}
+    services {zebra OSPFv2 OSPFv3 IPForward IPsec}
     custom-image $CORE_DATA_DIR/icons/normal/router_red.gif
 }
 
@@ -515,20 +509,7 @@ node n2 {
 	
 	}
     }
-    custom-config {
-	custom-config-id service:IPsec
-	custom-command IPsec
-	config {
-	
-	('ipsec.sh', )
-	60
-	('sh ipsec.sh', )
-	('killall racoon', )
-	
-	
-	}
-    }
-    services {zebra OSPFv2 OSPFv3 vtysh IPForward IPsec}
+    services {zebra OSPFv2 OSPFv3 IPForward IPsec}
     custom-image $CORE_DATA_DIR/icons/normal/router_red.gif
 }
 
@@ -684,20 +665,7 @@ node n3 {
 	
 	}
     }
-    custom-config {
-	custom-config-id service:IPsec
-	custom-command IPsec
-	config {
-	
-	('ipsec.sh', )
-	60
-	('sh ipsec.sh', )
-	('killall racoon', )
-	
-	
-	}
-    }
-    services {zebra OSPFv2 OSPFv3 vtysh IPForward IPsec}
+    services {zebra OSPFv2 OSPFv3 IPForward IPsec}
     custom-image $CORE_DATA_DIR/icons/normal/router_red.gif
 }
 
