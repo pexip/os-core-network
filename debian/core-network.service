@@ -1,0 +1,10 @@
+[Unit]
+Description=core-daemon network daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/sbin/core-daemon
+Type=exec
+
+[Install]
+WantedBy=multi-user.target

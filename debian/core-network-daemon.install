@@ -1,8 +1,3 @@
-etc
-usr/lib/python*
-usr/sbin
-usr/share/core/examples/co[nr][et]* usr/share/doc/core-network-daemon/examples
-usr/share/core/examples/[efhmns]* usr/share/doc/core-network-daemon/examples
-usr/share/man/man1/core-[cdmx]*
-usr/share/man/man1/cores*
-usr/share/man/man1/[nv]*
+daemon/data/* etc/core/
+daemon/scripts/* usr/sbin/
+man/* usr/share/man/man1/

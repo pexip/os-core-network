@@ -4,14 +4,13 @@
 export DEB_CFLAGS_MAINT_APPEND  = -fPIE
 export DEB_LDFLAGS_MAINT_APPEND = -Wl,-z,now
 
+export PYBUILD_NAME=core
+export PYBUILD_DIR=daemon
+export PYBUILD_SYSTEM=pyproject
+
 %:
-	dh $@ --with autoreconf,python3 --parallel
+	dh $@ --with autoreconf,python3 --parallel --buildsystem autoconf
+	dh $@ --with autoreconf,python3 --parallel --buildsystem pybuild
 
 override_dh_autoreconf:
 	dh_autoreconf ./bootstrap.sh
-
-override_dh_installinit:
-	dh_installinit -p core-network-daemon -o core-daemon --name=core-daemon
-
-override_dh_compress:
-	dh_compress -X.py -Xsample

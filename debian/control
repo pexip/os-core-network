@@ -7,7 +7,7 @@ XBCS-Pexip-Original-Uploaders: Jeffrey M. Ahrenholz <ahrenholz@gmail.com>
 Build-Depends: debhelper-compat (= 13),
                dh-autoreconf,
                bridge-utils,
-               dh-python,
+               dh-python, pybuild-plugin-pyproject,
                ebtables,
                gcc (>= 4.8.1-2~),
                help2man,
@@ -17,7 +17,17 @@ Build-Depends: debhelper-compat (= 13),
                net-tools | freebsd-net-tools,
                pkg-config,
                procps,
-               python3-all-dev
+               python3-all-dev,
+	       python3-fabric,
+               python3-grpcio,
+               python3-invoke,
+               python3-lxml,
+               python3-mako,
+               python3-netaddr,
+               python3-pil,
+               python3-protobuf,
+               python3-pyproj,
+               python3-yaml,
 Standards-Version: 3.9.6
 Homepage: http://www.nrl.navy.mil/itd/ncs/products/core
 Vcs-Git: git://anonscm.debian.org/collab-maint/core-network.git
@@ -26,7 +36,7 @@ XS-Pexip-Upstream: http://ftp.debian.org/debian/ sid
 
 Package: core-network
 Architecture: all
-Depends: ${misc:Depends}, core-network-daemon, core-network-gui
+Depends: ${misc:Depends}, core-network-daemon, core-network-gui, python3-core,
 Suggests: tcpdump
 Description: intuitive network emulator that interacts with real nets (metapackage)
  The Common Open Research Emulator (CORE) is a tool for emulating
@@ -60,7 +70,8 @@ Depends: ${shlibs:Depends},
          ebtables,
          iproute | iproute2,
          psmisc,
-         python
+         python3,
+         python3-core,
 Recommends: quagga
 Suggests: core-network-gui
 Description: intuitive network emulator that interacts with real nets (daemon)
@@ -90,7 +101,7 @@ Description: intuitive network emulator that interacts with real nets (daemon)
 
 Package: core-network-gui
 Architecture: all
-Depends: ${misc:Depends}, libtk-img, tk8.5
+Depends: ${misc:Depends}, libtk-img, tk8.6, python3-core
 Recommends: tcpdump
 Suggests: core-network-daemon, tshark, wireshark
 Description: intuitive network emulator that interacts with real nets (GUI)
@@ -116,3 +127,30 @@ Description: intuitive network emulator that interacts with real nets (GUI)
       installed on the real machine, as tcpdump.
  .
  This package provides the CORE GUI.
+
+Package: python3-core
+Architecture: any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlib:Depends}
+Description: intuitive network emulator that interacts with real nets (python library)
+ The Common Open Research Emulator (CORE) is a tool for emulating
+ networks in one or more machines. You can connect these emulated
+ networks to live networks.
+ .
+ CORE consists of a GUI for drawing topologies of lightweight virtual
+ machines, and Python modules for scripting network emulation.
+ .
+ Key features:
+ .
+   1. Network lab in a box
+        - Efficient and scalable
+        - Easy-to-use GUI canvas
+        - Centralized configuration and control
+   2. Runs applications and protocols without modifying them
+   3. Real-time connection to live networks
+        - Hardware-in-the-loop
+        - Distributed with multiple COREs
+   4. Highly customizable
+   5. The emulated machines can use several resources and programs
+      installed on the real machine, as tcpdump.
+ .
+ This package provides the CORE python library
