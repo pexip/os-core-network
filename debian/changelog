@@ -1,3 +1,10 @@
+core-network (8.2.0-0pexip1) pexip; urgency=medium
+
+  * New upstream release.
+  * Build for bullseye.
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Thu, 23 Jun 2022 15:29:41 +0100
+
 core-network (4.8-1pexip4) pexip; urgency=medium
 
   * Rebuild again in buster. Previous build was done using stretch by
