@@ -1,4 +1,4 @@
-core-network (8.2.0-0pexip1) pexip; urgency=medium
+core-network (8.2.0-0pexip1) pexip-bullseye; urgency=medium
 
   * New upstream release.
   * Build for bullseye.
