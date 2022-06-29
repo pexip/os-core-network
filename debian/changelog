@@ -1,3 +1,9 @@
+core-network (8.2.0-0pexip2) pexip-bullseye; urgency=medium
+
+  * Move systemd service file from core-network to core-network-daemon.
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Wed, 29 Jun 2022 22:26:20 +0100
+
 core-network (8.2.0-0pexip1) pexip-bullseye; urgency=medium
 
   * New upstream release.
