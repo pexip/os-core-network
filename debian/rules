@@ -12,5 +12,9 @@ export PYBUILD_SYSTEM=pyproject
 	dh $@ --with autoreconf,python3 --parallel --buildsystem autoconf
 	dh $@ --with autoreconf,python3 --parallel --buildsystem pybuild
 
+override_dh_auto_install:
+	make DESTDIR=$(CURDIR)/debian/tmp install
+	dh_auto_install -O--buildsystem=pybuild
+
 override_dh_autoreconf:
 	dh_autoreconf ./bootstrap.sh

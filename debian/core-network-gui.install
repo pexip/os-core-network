@@ -1,5 +1,7 @@
-debian/tmp/usr/bin usr/
-debian/tmp/usr/lib/core usr/lib/core/
-debian/tmp/usr/share/applications usr/share/applications/
-debian/tmp/usr/share/core usr/share/core/
-debian/tmp/usr/share/pixmaps usr/share/pixmaps/
+debian/tmp/usr/bin/core-gui-legacy usr/bin/
+debian/tmp/usr/lib/core/* usr/lib/core/
+debian/tmp/usr/share/applications/* usr/share/applications/
+debian/tmp/usr/share/core/* usr/share/core/
+debian/tmp/usr/share/pixmaps/* usr/share/pixmaps/
+daemon/scripts/core-gui usr/sbin/
+man/core-gui.1 usr/share/man/man1/
