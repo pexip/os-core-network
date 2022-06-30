@@ -1,3 +1,9 @@
+core-network (8.2.0-0pexip3) pexip-bullseye; urgency=medium
+
+  * Fix substvars generation for python3-mako dependency.
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Thu, 30 Jun 2022 10:38:33 +0100
+
 core-network (8.2.0-0pexip2) pexip-bullseye; urgency=medium
 
   * Move systemd service file from core-network to core-network-daemon.
