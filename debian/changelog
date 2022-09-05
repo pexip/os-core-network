@@ -1,3 +1,9 @@
+core-network (8.2.0-0pexip4) pexip-bullseye; urgency=medium
+
+  * Bullseye rebuild for ARM64 inclusion
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Mon, 05 Sep 2022 10:31:21 +0100
+
 core-network (8.2.0-0pexip3) pexip-bullseye; urgency=medium
 
   * Fix substvars generation for python3-mako dependency.
