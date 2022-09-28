@@ -1,6 +1,7 @@
 core-network (8.2.0-0pexip5) pexip; urgency=medium
 
   * Fix sysctl name handling.
+  * Add required dependencies.
 
  -- Mark Hymers <mark.hymers@pexip.com>  Wed, 28 Sep 2022 16:34:35 +0100
 
