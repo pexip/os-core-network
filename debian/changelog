@@ -1,3 +1,9 @@
+core-network (8.2.0-0pexip7) pexip-bookworm; urgency=medium
+
+  * Bookworm build for product distribution
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Sat, 09 Dec 2023 22:52:05 +0000
+
 core-network (8.2.0-0pexip6) pexip-bookworm; urgency=medium
 
   * Initial bookworm build
