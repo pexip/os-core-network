@@ -1,112 +1,133 @@
 import json
 import logging
+import shlex
+from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Callable, Dict, Optional
+from typing import TYPE_CHECKING
 
 from core import utils
 from core.emulator.distributed import DistributedServer
-from core.emulator.enumerations import NodeTypes
-from core.errors import CoreCommandError
-from core.nodes.base import CoreNode
-from core.nodes.netclient import LinuxNetClient, get_net_client
+from core.errors import CoreCommandError, CoreError
+from core.executables import BASH
+from core.nodes.base import CoreNode, CoreNodeOptions
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from core.emulator.session import Session
 
+DOCKER: str = "docker"
 
-class DockerClient:
-    def __init__(self, name: str, image: str, run: Callable[..., str]) -> None:
-        self.name: str = name
-        self.image: str = image
-        self.run: Callable[..., str] = run
-        self.pid: Optional[str] = None
 
-    def create_container(self) -> str:
-        self.run(
-            f"docker run -td --init --net=none --hostname {self.name} "
-            f"--name {self.name} --sysctl net.ipv6.conf.all.disable_ipv6=0 "
-            f"--privileged {self.image} /bin/bash"
-        )
-        self.pid = self.get_pid()
-        return self.pid
+@dataclass
+class DockerOptions(CoreNodeOptions):
+    image: str = "ubuntu"
+    """image used when creating container"""
+    binds: list[tuple[str, str]] = field(default_factory=list)
+    """bind mount source and destinations to setup within container"""
+    volumes: list[tuple[str, str, bool, bool]] = field(default_factory=list)
+    """
+    volume mount source, destination, unique, delete to setup within container
 
-    def get_info(self) -> Dict:
-        args = f"docker inspect {self.name}"
-        output = self.run(args)
-        data = json.loads(output)
-        if not data:
-            raise CoreCommandError(1, args, f"docker({self.name}) not present")
-        return data[0]
+    unique is True for node unique volume naming
+    delete is True for deleting volume mount during shutdown
+    """
 
-    def is_alive(self) -> bool:
-        try:
-            data = self.get_info()
-            return data["State"]["Running"]
-        except CoreCommandError:
-            return False
 
-    def stop_container(self) -> None:
-        self.run(f"docker rm -f {self.name}")
-
-    def check_cmd(self, cmd: str, wait: bool = True, shell: bool = False) -> str:
-        logger.info("docker cmd output: %s", cmd)
-        return utils.cmd(f"docker exec {self.name} {cmd}", wait=wait, shell=shell)
-
-    def create_ns_cmd(self, cmd: str) -> str:
-        return f"nsenter -t {self.pid} -a {cmd}"
-
-    def get_pid(self) -> str:
-        args = f"docker inspect -f '{{{{.State.Pid}}}}' {self.name}"
-        output = self.run(args)
-        self.pid = output
-        logger.debug("node(%s) pid: %s", self.name, self.pid)
-        return output
-
-    def copy_file(self, src_path: Path, dst_path: Path) -> str:
-        args = f"docker cp {src_path} {self.name}:{dst_path}"
-        return self.run(args)
+@dataclass
+class DockerVolume:
+    src: str
+    """volume mount name"""
+    dst: str
+    """volume mount destination directory"""
+    unique: bool = True
+    """True to create a node unique prefixed name for this volume"""
+    delete: bool = True
+    """True to delete the volume during shutdown"""
+    path: str = None
+    """path to the volume on the host"""
 
 
 class DockerNode(CoreNode):
-    apitype = NodeTypes.DOCKER
+    """
+    Provides logic for creating a Docker based node.
+    """
 
     def __init__(
         self,
         session: "Session",
         _id: int = None,
         name: str = None,
-        directory: str = None,
         server: DistributedServer = None,
-        image: str = None,
+        options: DockerOptions = None,
     ) -> None:
         """
         Create a DockerNode instance.
 
         :param session: core session instance
-        :param _id: object id
-        :param name: object name
-        :param directory: node directory
+        :param _id: node id
+        :param name: node name
         :param server: remote server node
             will run on, default is None for localhost
-        :param image: image to start container with
+        :param options: options for creating node
         """
-        if image is None:
-            image = "ubuntu"
-        self.image: str = image
-        super().__init__(session, _id, name, directory, server)
+        options = options or DockerOptions()
+        super().__init__(session, _id, name, server, options)
+        self.image: str = options.image
+        self.binds: list[tuple[str, str]] = options.binds
+        self.volumes: dict[str, DockerVolume] = {}
+        self.env: dict[str, str] = {}
+        for src, dst, unique, delete in options.volumes:
+            src_name = self._unique_name(src) if unique else src
+            self.volumes[src] = DockerVolume(src_name, dst, unique, delete)
 
-    def create_node_net_client(self, use_ovs: bool) -> LinuxNetClient:
+    @classmethod
+    def create_options(cls) -> DockerOptions:
         """
-        Create node network client for running network commands within the nodes
-        container.
+        Return default creation options, which can be used during node creation.
 
-        :param use_ovs: True for OVS bridges, False for Linux bridges
-        :return:node network client
+        :return: docker options
         """
-        return get_net_client(use_ovs, self.nsenter_cmd)
+        return DockerOptions()
+
+    def create_cmd(self, args: str, shell: bool = False) -> str:
+        """
+        Create command used to run commands within the context of a node.
+
+        :param args: command arguments
+        :param shell: True to run shell like, False otherwise
+        :return: node command
+        """
+        if shell:
+            args = f"{BASH} -c {shlex.quote(args)}"
+        return f"nsenter -t {self.pid} -m -u -i -p -n -- {args}"
+
+    def cmd(self, args: str, wait: bool = True, shell: bool = False) -> str:
+        """
+        Runs a command that is used to configure and setup the network within a
+        node.
+
+        :param args: command to run
+        :param wait: True to wait for status, False otherwise
+        :param shell: True to use shell, False otherwise
+        :return: combined stdout and stderr
+        :raises CoreCommandError: when a non-zero exit status occurs
+        """
+        args = self.create_cmd(args, shell)
+        if self.server is None:
+            return utils.cmd(args, wait=wait, shell=shell, env=self.env)
+        else:
+            return self.server.remote_cmd(args, wait=wait, env=self.env)
+
+    def _unique_name(self, name: str) -> str:
+        """
+        Creates a session/node unique prefixed name for the provided input.
+
+        :param name: name to make unique
+        :return: unique session/node prefixed name
+        """
+        return f"{self.session.id}.{self.id}.{name}"
 
     def alive(self) -> bool:
         """
@@ -114,22 +135,64 @@ class DockerNode(CoreNode):
 
         :return: True if node is alive, False otherwise
         """
-        return self.client.is_alive()
+        try:
+            running = self.host_cmd(
+                f"{DOCKER} inspect -f '{{{{.State.Running}}}}' {self.name}"
+            )
+            return json.loads(running)
+        except CoreCommandError:
+            return False
 
     def startup(self) -> None:
         """
-        Start a new namespace node by invoking the vnoded process that
-        allocates a new namespace. Bring up the loopback device and set
-        the hostname.
+        Create a docker container instance for the specified image.
 
         :return: nothing
         """
         with self.lock:
             if self.up:
-                raise ValueError("starting a node that is already up")
+                raise CoreError(f"starting node({self.name}) that is already up")
+            # create node directory
             self.makenodedir()
-            self.client = DockerClient(self.name, self.image, self.host_cmd)
-            self.pid = self.client.create_container()
+            # setup commands for creating bind/volume mounts
+            binds = ""
+            for src, dst in self.binds:
+                binds += f"--mount type=bind,source={src},target={dst} "
+            volumes = ""
+            for volume in self.volumes.values():
+                volumes += (
+                    f"--mount type=volume," f"source={volume.src},target={volume.dst} "
+                )
+            # normalize hostname
+            hostname = self.name.replace("_", "-")
+            # create container and retrieve the created containers PID
+            self.host_cmd(
+                f"{DOCKER} run -td --init --net=none --hostname {hostname} "
+                f"--name {self.name} --sysctl net.ipv6.conf.all.disable_ipv6=0 "
+                f"{binds} {volumes} "
+                f"--privileged {self.image} tail -f /dev/null"
+            )
+            # retrieve pid and process environment for use in nsenter commands
+            self.pid = self.host_cmd(
+                f"{DOCKER} inspect -f '{{{{.State.Pid}}}}' {self.name}"
+            )
+            output = self.host_cmd(f"cat /proc/{self.pid}/environ")
+            for line in output.split("\x00"):
+                if not line:
+                    continue
+                key, value = line.split("=")
+                self.env[key] = value
+            # setup symlinks for bind and volume mounts within
+            for src, dst in self.binds:
+                link_path = self.host_path(Path(dst), True)
+                self.host_cmd(f"ln -s {src} {link_path}")
+            for volume in self.volumes.values():
+                volume.path = self.host_cmd(
+                    f"{DOCKER} volume inspect -f '{{{{.Mountpoint}}}}' {volume.src}"
+                )
+                link_path = self.host_path(Path(volume.dst), True)
+                self.host_cmd(f"ln -s {volume.path} {link_path}")
+            logger.debug("node(%s) pid: %s", self.name, self.pid)
             self.up = True
 
     def shutdown(self) -> None:
@@ -141,19 +204,13 @@ class DockerNode(CoreNode):
         # nothing to do if node is not up
         if not self.up:
             return
-
         with self.lock:
             self.ifaces.clear()
-            self.client.stop_container()
+            self.host_cmd(f"{DOCKER} rm -f {self.name}")
+            for volume in self.volumes.values():
+                if volume.delete:
+                    self.host_cmd(f"{DOCKER} volume rm {volume.src}")
             self.up = False
-
-    def nsenter_cmd(self, args: str, wait: bool = True, shell: bool = False) -> str:
-        if self.server is None:
-            args = self.client.create_ns_cmd(args)
-            return utils.cmd(args, wait=wait, shell=shell)
-        else:
-            args = self.client.create_ns_cmd(args)
-            return self.server.remote_cmd(args, wait=wait)
 
     def termcmdstring(self, sh: str = "/bin/sh") -> str:
         """
@@ -162,7 +219,11 @@ class DockerNode(CoreNode):
         :param sh: shell to execute command in
         :return: str
         """
-        return f"docker exec -it {self.name} bash"
+        terminal = f"{DOCKER} exec -it {self.name} {sh}"
+        if self.server is None:
+            return terminal
+        else:
+            return f"ssh -X -f {self.server.host} xterm -e {terminal}"
 
     def create_dir(self, dir_path: Path) -> None:
         """
@@ -172,8 +233,7 @@ class DockerNode(CoreNode):
         :return: nothing
         """
         logger.debug("creating node dir: %s", dir_path)
-        args = f"mkdir -p {dir_path}"
-        self.cmd(args)
+        self.cmd(f"mkdir -p {dir_path}")
 
     def mount(self, src_path: str, target_path: str) -> None:
         """
@@ -198,7 +258,7 @@ class DockerNode(CoreNode):
         """
         logger.debug("node(%s) create file(%s) mode(%o)", self.name, file_path, mode)
         temp = NamedTemporaryFile(delete=False)
-        temp.write(contents.encode("utf-8"))
+        temp.write(contents.encode())
         temp.close()
         temp_path = Path(temp.name)
         directory = file_path.parent
@@ -206,7 +266,7 @@ class DockerNode(CoreNode):
             self.cmd(f"mkdir -m {0o755:o} -p {directory}")
         if self.server is not None:
             self.server.remote_put(temp_path, temp_path)
-        self.client.copy_file(temp_path, file_path)
+        self.host_cmd(f"{DOCKER} cp {temp_path} {self.name}:{file_path}")
         self.cmd(f"chmod {mode:o} {file_path}")
         if self.server is not None:
             self.host_cmd(f"rm -f {temp_path}")
@@ -231,6 +291,6 @@ class DockerNode(CoreNode):
             temp_path = Path(temp.name)
             src_path = temp_path
             self.server.remote_put(src_path, temp_path)
-        self.client.copy_file(src_path, dst_path)
+        self.host_cmd(f"{DOCKER} cp {src_path} {self.name}:{dst_path}")
         if mode is not None:
             self.cmd(f"chmod {mode:o} {dst_path}")

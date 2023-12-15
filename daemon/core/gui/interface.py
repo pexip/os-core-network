@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Optional
 
 import netaddr
 from netaddr import EUI, IPNetwork
@@ -43,7 +43,7 @@ class Subnets:
     def __hash__(self) -> int:
         return hash(self.key())
 
-    def key(self) -> Tuple[IPNetwork, IPNetwork]:
+    def key(self) -> tuple[IPNetwork, IPNetwork]:
         return self.ip4, self.ip6
 
     def next(self) -> "Subnets":
@@ -61,8 +61,8 @@ class InterfaceManager:
         self.mac: EUI = EUI(mac, dialect=netaddr.mac_unix_expanded)
         self.current_mac: Optional[EUI] = None
         self.current_subnets: Optional[Subnets] = None
-        self.used_subnets: Dict[Tuple[IPNetwork, IPNetwork], Subnets] = {}
-        self.used_macs: Set[str] = set()
+        self.used_subnets: dict[tuple[IPNetwork, IPNetwork], Subnets] = {}
+        self.used_macs: set[str] = set()
 
     def update_ips(self, ip4: str, ip6: str) -> None:
         self.reset()
@@ -91,7 +91,7 @@ class InterfaceManager:
         self.current_subnets = None
         self.used_subnets.clear()
 
-    def removed(self, links: List[Link]) -> None:
+    def removed(self, links: list[Link]) -> None:
         # get remaining subnets
         remaining_subnets = set()
         for edge in self.app.core.links.values():
@@ -121,7 +121,7 @@ class InterfaceManager:
                     subnets.used_indexes.discard(index)
         self.current_subnets = None
 
-    def set_macs(self, links: List[Link]) -> None:
+    def set_macs(self, links: list[Link]) -> None:
         self.current_mac = self.mac
         self.used_macs.clear()
         for link in links:
@@ -130,7 +130,7 @@ class InterfaceManager:
             if link.iface2:
                 self.used_macs.add(link.iface2.mac)
 
-    def joined(self, links: List[Link]) -> None:
+    def joined(self, links: list[Link]) -> None:
         ifaces = []
         for link in links:
             if link.iface1:
@@ -208,7 +208,7 @@ class InterfaceManager:
             logger.info("ignoring subnet change for link between network nodes")
 
     def find_subnets(
-        self, canvas_node: CanvasNode, visited: Set[int] = None
+        self, canvas_node: CanvasNode, visited: set[int] = None
     ) -> Optional[IPNetwork]:
         logger.info("finding subnet for node: %s", canvas_node.core_node.name)
         subnets = None
@@ -241,10 +241,10 @@ class InterfaceManager:
         dst_node = edge.dst.core_node
         self.determine_subnets(edge.src, edge.dst)
         src_iface = None
-        if nutils.is_container(src_node):
+        if nutils.is_iface_node(src_node):
             src_iface = self.create_iface(edge.src, edge.linked_wireless)
         dst_iface = None
-        if nutils.is_container(dst_node):
+        if nutils.is_iface_node(dst_node):
             dst_iface = self.create_iface(edge.dst, edge.linked_wireless)
         link = Link(
             type=LinkType.WIRED,
@@ -258,22 +258,26 @@ class InterfaceManager:
 
     def create_iface(self, canvas_node: CanvasNode, wireless_link: bool) -> Interface:
         node = canvas_node.core_node
-        ip4, ip6 = self.get_ips(node)
-        if wireless_link:
-            ip4_mask = WIRELESS_IP4_MASK
-            ip6_mask = WIRELESS_IP6_MASK
+        if nutils.is_bridge(node):
+            iface_id = canvas_node.next_iface_id()
+            iface = Interface(id=iface_id)
         else:
-            ip4_mask = IP4_MASK
-            ip6_mask = IP6_MASK
-        iface_id = canvas_node.next_iface_id()
-        name = f"eth{iface_id}"
-        iface = Interface(
-            id=iface_id,
-            name=name,
-            ip4=ip4,
-            ip4_mask=ip4_mask,
-            ip6=ip6,
-            ip6_mask=ip6_mask,
-        )
+            ip4, ip6 = self.get_ips(node)
+            if wireless_link:
+                ip4_mask = WIRELESS_IP4_MASK
+                ip6_mask = WIRELESS_IP6_MASK
+            else:
+                ip4_mask = IP4_MASK
+                ip6_mask = IP6_MASK
+            iface_id = canvas_node.next_iface_id()
+            name = f"eth{iface_id}"
+            iface = Interface(
+                id=iface_id,
+                name=name,
+                ip4=ip4,
+                ip4_mask=ip4_mask,
+                ip6=ip6,
+                ip6_mask=ip6_mask,
+            )
         logger.info("create node(%s) interface(%s)", node.name, iface)
         return iface

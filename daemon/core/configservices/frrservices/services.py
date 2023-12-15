@@ -1,15 +1,27 @@
 import abc
-from typing import Any, Dict, List
+from typing import Any
 
 from core.config import Configuration
 from core.configservice.base import ConfigService, ConfigServiceMode
 from core.emane.nodes import EmaneNet
-from core.nodes.base import CoreNodeBase
+from core.nodes.base import CoreNodeBase, NodeBase
 from core.nodes.interface import DEFAULT_MTU, CoreInterface
-from core.nodes.network import WlanNode
+from core.nodes.network import PtpNet, WlanNode
+from core.nodes.physical import Rj45Node
+from core.nodes.wireless import WirelessNode
 
 GROUP: str = "FRR"
 FRR_STATE_DIR: str = "/var/run/frr"
+
+
+def is_wireless(node: NodeBase) -> bool:
+    """
+    Check if the node is a wireless type node.
+
+    :param node: node to check type for
+    :return: True if wireless type, False otherwise
+    """
+    return isinstance(node, (WlanNode, EmaneNet, WirelessNode))
 
 
 def has_mtu_mismatch(iface: CoreInterface) -> bool:
@@ -53,32 +65,47 @@ def get_router_id(node: CoreNodeBase) -> str:
     return "0.0.0.0"
 
 
+def rj45_check(iface: CoreInterface) -> bool:
+    """
+    Helper to detect whether interface is connected an external RJ45
+    link.
+    """
+    if iface.net:
+        for peer_iface in iface.net.get_ifaces():
+            if peer_iface == iface:
+                continue
+            if isinstance(peer_iface.node, Rj45Node):
+                return True
+    return False
+
+
 class FRRZebra(ConfigService):
     name: str = "FRRzebra"
     group: str = GROUP
-    directories: List[str] = ["/usr/local/etc/frr", "/var/run/frr", "/var/log/frr"]
-    files: List[str] = [
+    directories: list[str] = ["/usr/local/etc/frr", "/var/run/frr", "/var/log/frr"]
+    files: list[str] = [
         "/usr/local/etc/frr/frr.conf",
         "frrboot.sh",
         "/usr/local/etc/frr/vtysh.conf",
         "/usr/local/etc/frr/daemons",
     ]
-    executables: List[str] = ["zebra"]
-    dependencies: List[str] = []
-    startup: List[str] = ["bash frrboot.sh zebra"]
-    validate: List[str] = ["pidof zebra"]
-    shutdown: List[str] = ["killall zebra"]
+    executables: list[str] = ["zebra"]
+    dependencies: list[str] = []
+    startup: list[str] = ["bash frrboot.sh zebra"]
+    validate: list[str] = ["pidof zebra"]
+    shutdown: list[str] = ["killall zebra"]
     validation_mode: ConfigServiceMode = ConfigServiceMode.BLOCKING
-    default_configs: List[Configuration] = []
-    modes: Dict[str, Dict[str, str]] = {}
+    default_configs: list[Configuration] = []
+    modes: dict[str, dict[str, str]] = {}
 
-    def data(self) -> Dict[str, Any]:
+    def data(self) -> dict[str, Any]:
         frr_conf = self.files[0]
-        frr_bin_search = self.node.session.options.get_config(
+        frr_bin_search = self.node.session.options.get(
             "frr_bin_search", default="/usr/local/bin /usr/bin /usr/lib/frr"
         ).strip('"')
-        frr_sbin_search = self.node.session.options.get_config(
-            "frr_sbin_search", default="/usr/local/sbin /usr/sbin /usr/lib/frr"
+        frr_sbin_search = self.node.session.options.get(
+            "frr_sbin_search",
+            default="/usr/local/sbin /usr/sbin /usr/lib/frr /usr/libexec/frr",
         ).strip('"')
 
         services = []
@@ -119,16 +146,16 @@ class FRRZebra(ConfigService):
 
 class FrrService(abc.ABC):
     group: str = GROUP
-    directories: List[str] = []
-    files: List[str] = []
-    executables: List[str] = []
-    dependencies: List[str] = ["FRRzebra"]
-    startup: List[str] = []
-    validate: List[str] = []
-    shutdown: List[str] = []
+    directories: list[str] = []
+    files: list[str] = []
+    executables: list[str] = []
+    dependencies: list[str] = ["FRRzebra"]
+    startup: list[str] = []
+    validate: list[str] = []
+    shutdown: list[str] = []
     validation_mode: ConfigServiceMode = ConfigServiceMode.BLOCKING
-    default_configs: List[Configuration] = []
-    modes: Dict[str, Dict[str, str]] = {}
+    default_configs: list[Configuration] = []
+    modes: dict[str, dict[str, str]] = {}
     ipv4_routing: bool = False
     ipv6_routing: bool = False
 
@@ -149,8 +176,8 @@ class FRROspfv2(FrrService, ConfigService):
     """
 
     name: str = "FRROSPFv2"
-    shutdown: List[str] = ["killall ospfd"]
-    validate: List[str] = ["pidof ospfd"]
+    shutdown: list[str] = ["killall ospfd"]
+    validate: list[str] = ["pidof ospfd"]
     ipv4_routing: bool = True
 
     def frr_config(self) -> str:
@@ -158,7 +185,7 @@ class FRROspfv2(FrrService, ConfigService):
         addresses = []
         for iface in self.node.get_ifaces(control=False):
             for ip4 in iface.ip4s:
-                addresses.append(str(ip4.ip))
+                addresses.append(str(ip4))
         data = dict(router_id=router_id, addresses=addresses)
         text = """
         router ospf
@@ -166,15 +193,31 @@ class FRROspfv2(FrrService, ConfigService):
           % for addr in addresses:
           network ${addr} area 0
           % endfor
+          ospf opaque-lsa
         !
         """
         return self.render_text(text, data)
 
     def frr_iface_config(self, iface: CoreInterface) -> str:
-        if has_mtu_mismatch(iface):
-            return "ip ospf mtu-ignore"
-        else:
-            return ""
+        has_mtu = has_mtu_mismatch(iface)
+        has_rj45 = rj45_check(iface)
+        is_ptp = isinstance(iface.net, PtpNet)
+        data = dict(has_mtu=has_mtu, is_ptp=is_ptp, has_rj45=has_rj45)
+        text = """
+        % if has_mtu:
+        ip ospf mtu-ignore
+        % endif
+        % if has_rj45:
+        <% return STOP_RENDERING %>
+        % endif
+        % if is_ptp:
+        ip ospf network point-to-point
+        % endif
+        ip ospf hello-interval 2
+        ip ospf dead-interval 6
+        ip ospf retransmit-interval 5
+        """
+        return self.render_text(text, data)
 
 
 class FRROspfv3(FrrService, ConfigService):
@@ -185,8 +228,8 @@ class FRROspfv3(FrrService, ConfigService):
     """
 
     name: str = "FRROSPFv3"
-    shutdown: List[str] = ["killall ospf6d"]
-    validate: List[str] = ["pidof ospf6d"]
+    shutdown: list[str] = ["killall ospf6d"]
+    validate: list[str] = ["pidof ospf6d"]
     ipv4_routing: bool = True
     ipv6_routing: bool = True
 
@@ -222,8 +265,8 @@ class FRRBgp(FrrService, ConfigService):
     """
 
     name: str = "FRRBGP"
-    shutdown: List[str] = ["killall bgpd"]
-    validate: List[str] = ["pidof bgpd"]
+    shutdown: list[str] = ["killall bgpd"]
+    validate: list[str] = ["pidof bgpd"]
     custom_needed: bool = True
     ipv4_routing: bool = True
     ipv6_routing: bool = True
@@ -252,8 +295,8 @@ class FRRRip(FrrService, ConfigService):
     """
 
     name: str = "FRRRIP"
-    shutdown: List[str] = ["killall ripd"]
-    validate: List[str] = ["pidof ripd"]
+    shutdown: list[str] = ["killall ripd"]
+    validate: list[str] = ["pidof ripd"]
     ipv4_routing: bool = True
 
     def frr_config(self) -> str:
@@ -277,8 +320,8 @@ class FRRRipng(FrrService, ConfigService):
     """
 
     name: str = "FRRRIPNG"
-    shutdown: List[str] = ["killall ripngd"]
-    validate: List[str] = ["pidof ripngd"]
+    shutdown: list[str] = ["killall ripngd"]
+    validate: list[str] = ["pidof ripngd"]
     ipv6_routing: bool = True
 
     def frr_config(self) -> str:
@@ -303,8 +346,8 @@ class FRRBabel(FrrService, ConfigService):
     """
 
     name: str = "FRRBabel"
-    shutdown: List[str] = ["killall babeld"]
-    validate: List[str] = ["pidof babeld"]
+    shutdown: list[str] = ["killall babeld"]
+    validate: list[str] = ["pidof babeld"]
     ipv6_routing: bool = True
 
     def frr_config(self) -> str:
@@ -324,7 +367,7 @@ class FRRBabel(FrrService, ConfigService):
         return self.render_text(text, data)
 
     def frr_iface_config(self, iface: CoreInterface) -> str:
-        if isinstance(iface.net, (WlanNode, EmaneNet)):
+        if is_wireless(iface.net):
             text = """
             babel wireless
             no babel split-horizon
@@ -343,8 +386,8 @@ class FRRpimd(FrrService, ConfigService):
     """
 
     name: str = "FRRpimd"
-    shutdown: List[str] = ["killall pimd"]
-    validate: List[str] = ["pidof pimd"]
+    shutdown: list[str] = ["killall pimd"]
+    validate: list[str] = ["pidof pimd"]
     ipv4_routing: bool = True
 
     def frr_config(self) -> str:

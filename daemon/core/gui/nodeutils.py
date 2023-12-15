@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import TYPE_CHECKING, Optional
 
 from PIL.ImageTk import PhotoImage
 
@@ -13,18 +13,27 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from core.gui.app import Application
 
-NODES: List["NodeDraw"] = []
-NETWORK_NODES: List["NodeDraw"] = []
+NODES: list["NodeDraw"] = []
+NETWORK_NODES: list["NodeDraw"] = []
 NODE_ICONS = {}
-CONTAINER_NODES: Set[NodeType] = {NodeType.DEFAULT, NodeType.DOCKER, NodeType.LXC}
-IMAGE_NODES: Set[NodeType] = {NodeType.DOCKER, NodeType.LXC}
-WIRELESS_NODES: Set[NodeType] = {NodeType.WIRELESS_LAN, NodeType.EMANE}
-RJ45_NODES: Set[NodeType] = {NodeType.RJ45}
-BRIDGE_NODES: Set[NodeType] = {NodeType.HUB, NodeType.SWITCH}
-IGNORE_NODES: Set[NodeType] = {NodeType.CONTROL_NET}
-MOBILITY_NODES: Set[NodeType] = {NodeType.WIRELESS_LAN, NodeType.EMANE}
-NODE_MODELS: Set[str] = {"router", "host", "PC", "mdr", "prouter"}
-ROUTER_NODES: Set[str] = {"router", "mdr"}
+CONTAINER_NODES: set[NodeType] = {
+    NodeType.DEFAULT,
+    NodeType.DOCKER,
+    NodeType.LXC,
+    NodeType.PODMAN,
+}
+IMAGE_NODES: set[NodeType] = {NodeType.DOCKER, NodeType.LXC, NodeType.PODMAN}
+WIRELESS_NODES: set[NodeType] = {
+    NodeType.WIRELESS_LAN,
+    NodeType.EMANE,
+    NodeType.WIRELESS,
+}
+RJ45_NODES: set[NodeType] = {NodeType.RJ45}
+BRIDGE_NODES: set[NodeType] = {NodeType.HUB, NodeType.SWITCH}
+IGNORE_NODES: set[NodeType] = {NodeType.CONTROL_NET}
+MOBILITY_NODES: set[NodeType] = {NodeType.WIRELESS_LAN, NodeType.EMANE}
+NODE_MODELS: set[str] = {"router", "PC", "mdr", "prouter"}
+ROUTER_NODES: set[str] = {"router", "mdr"}
 ANTENNA_ICON: Optional[PhotoImage] = None
 
 
@@ -37,6 +46,7 @@ def setup() -> None:
         (ImageEnum.PROUTER, NodeType.DEFAULT, "PRouter", "prouter"),
         (ImageEnum.DOCKER, NodeType.DOCKER, "Docker", None),
         (ImageEnum.LXC, NodeType.LXC, "LXC", None),
+        (ImageEnum.PODMAN, NodeType.PODMAN, "Podman", None),
     ]
     for image_enum, node_type, label, model in nodes:
         node_draw = NodeDraw.from_setup(image_enum, node_type, label, model)
@@ -46,6 +56,7 @@ def setup() -> None:
         (ImageEnum.HUB, NodeType.HUB, "Hub"),
         (ImageEnum.SWITCH, NodeType.SWITCH, "Switch"),
         (ImageEnum.WLAN, NodeType.WIRELESS_LAN, "WLAN"),
+        (ImageEnum.WIRELESS, NodeType.WIRELESS, "Wireless"),
         (ImageEnum.EMANE, NodeType.EMANE, "EMANE"),
         (ImageEnum.RJ45, NodeType.RJ45, "RJ45"),
         (ImageEnum.TUNNEL, NodeType.TUNNEL, "Tunnel"),
@@ -97,7 +108,11 @@ def is_custom(node: Node) -> bool:
     return is_model(node) and node.model not in NODE_MODELS
 
 
-def get_custom_services(gui_config: GuiConfig, name: str) -> List[str]:
+def is_iface_node(node: Node) -> bool:
+    return is_container(node) or is_bridge(node)
+
+
+def get_custom_services(gui_config: GuiConfig, name: str) -> list[str]:
     for custom_node in gui_config.nodes:
         if custom_node.name == name:
             return custom_node.services
@@ -114,7 +129,7 @@ def _get_custom_file(config: GuiConfig, name: str) -> Optional[str]:
 def get_icon(node: Node, app: "Application") -> PhotoImage:
     scale = app.app_scale
     image = None
-    # node icon was overriden with a specific value
+    # node icon was overridden with a specific value
     if node.icon:
         try:
             image = images.from_file(node.icon, width=images.NODE_SIZE, scale=scale)
@@ -145,7 +160,7 @@ class NodeDraw:
         self.image_file: Optional[str] = None
         self.node_type: Optional[NodeType] = None
         self.model: Optional[str] = None
-        self.services: Set[str] = set()
+        self.services: set[str] = set()
         self.label: Optional[str] = None
 
     @classmethod

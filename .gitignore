@@ -14,8 +14,12 @@ config.h.in
 config.log
 config.status
 configure
+configure~
 debian
 stamp-h1
+
+# python virtual environments
+venv
 
 # generated protobuf files
 *_pb2.py
@@ -58,3 +62,6 @@ daemon/setup.py
 
 # python
 __pycache__
+
+# ignore core player files
+*.core

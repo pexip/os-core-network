@@ -1,10 +1,6 @@
-import atexit
 import logging
 import os
-import signal
-import sys
 from pathlib import Path
-from typing import Dict, List, Type
 
 from core import utils
 from core.configservice.manager import ConfigServiceManager
@@ -18,31 +14,12 @@ logger = logging.getLogger(__name__)
 DEFAULT_EMANE_PREFIX: str = "/usr"
 
 
-def signal_handler(signal_number: int, _) -> None:
-    """
-    Handle signals and force an exit with cleanup.
-
-    :param signal_number: signal number
-    :param _: ignored
-    :return: nothing
-    """
-    logger.info("caught signal: %s", signal_number)
-    sys.exit(signal_number)
-
-
-signal.signal(signal.SIGHUP, signal_handler)
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
-signal.signal(signal.SIGUSR1, signal_handler)
-signal.signal(signal.SIGUSR2, signal_handler)
-
-
 class CoreEmu:
     """
     Provides logic for creating and configuring CORE sessions and the nodes within them.
     """
 
-    def __init__(self, config: Dict[str, str] = None) -> None:
+    def __init__(self, config: dict[str, str] = None) -> None:
         """
         Create a CoreEmu object.
 
@@ -53,13 +30,13 @@ class CoreEmu:
 
         # configuration
         config = config if config else {}
-        self.config: Dict[str, str] = config
+        self.config: dict[str, str] = config
 
         # session management
-        self.sessions: Dict[int, Session] = {}
+        self.sessions: dict[int, Session] = {}
 
         # load services
-        self.service_errors: List[str] = []
+        self.service_errors: list[str] = []
         self.service_manager: ConfigServiceManager = ConfigServiceManager()
         self._load_services()
 
@@ -69,9 +46,6 @@ class CoreEmu:
 
         # check executables exist on path
         self._validate_env()
-
-        # catch exit event
-        atexit.register(self.shutdown)
 
     def _validate_env(self) -> None:
         """
@@ -140,13 +114,11 @@ class CoreEmu:
         :return: nothing
         """
         logger.info("shutting down all sessions")
-        sessions = self.sessions.copy()
-        self.sessions.clear()
-        for _id in sessions:
-            session = sessions[_id]
+        while self.sessions:
+            _, session = self.sessions.popitem()
             session.shutdown()
 
-    def create_session(self, _id: int = None, _cls: Type[Session] = Session) -> Session:
+    def create_session(self, _id: int = None, _cls: type[Session] = Session) -> Session:
         """
         Create a new CORE session.
 
