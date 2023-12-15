@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 from core.api.grpc import (
     common_pb2,
@@ -67,6 +67,8 @@ class NodeType(Enum):
     CONTROL_NET = 13
     DOCKER = 15
     LXC = 16
+    WIRELESS = 17
+    PODMAN = 18
 
 
 class LinkType(Enum):
@@ -113,13 +115,13 @@ class EventType:
 class ConfigService:
     group: str
     name: str
-    executables: List[str]
-    dependencies: List[str]
-    directories: List[str]
-    files: List[str]
-    startup: List[str]
-    validate: List[str]
-    shutdown: List[str]
+    executables: list[str]
+    dependencies: list[str]
+    directories: list[str]
+    files: list[str]
+    startup: list[str]
+    validate: list[str]
+    shutdown: list[str]
     validation_mode: ConfigServiceValidationMode
     validation_timer: int
     validation_period: float
@@ -146,8 +148,8 @@ class ConfigService:
 class ConfigServiceConfig:
     node_id: int
     name: str
-    templates: Dict[str, str]
-    config: Dict[str, str]
+    templates: dict[str, str]
+    config: dict[str, str]
 
     @classmethod
     def from_proto(
@@ -163,15 +165,15 @@ class ConfigServiceConfig:
 
 @dataclass
 class ConfigServiceData:
-    templates: Dict[str, str] = field(default_factory=dict)
-    config: Dict[str, str] = field(default_factory=dict)
+    templates: dict[str, str] = field(default_factory=dict)
+    config: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
 class ConfigServiceDefaults:
-    templates: Dict[str, str]
-    config: Dict[str, "ConfigOption"]
-    modes: Dict[str, Dict[str, str]]
+    templates: dict[str, str]
+    config: dict[str, "ConfigOption"]
+    modes: dict[str, dict[str, str]]
 
     @classmethod
     def from_proto(
@@ -209,25 +211,25 @@ class Service:
 
 @dataclass
 class ServiceDefault:
-    node_type: str
-    services: List[str]
+    model: str
+    services: list[str]
 
     @classmethod
     def from_proto(cls, proto: services_pb2.ServiceDefaults) -> "ServiceDefault":
-        return ServiceDefault(node_type=proto.node_type, services=list(proto.services))
+        return ServiceDefault(model=proto.model, services=list(proto.services))
 
 
 @dataclass
 class NodeServiceData:
-    executables: List[str] = field(default_factory=list)
-    dependencies: List[str] = field(default_factory=list)
-    dirs: List[str] = field(default_factory=list)
-    configs: List[str] = field(default_factory=list)
-    startup: List[str] = field(default_factory=list)
-    validate: List[str] = field(default_factory=list)
+    executables: list[str] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)
+    dirs: list[str] = field(default_factory=list)
+    configs: list[str] = field(default_factory=list)
+    startup: list[str] = field(default_factory=list)
+    validate: list[str] = field(default_factory=list)
     validation_mode: ServiceValidationMode = ServiceValidationMode.NON_BLOCKING
     validation_timer: int = 5
-    shutdown: List[str] = field(default_factory=list)
+    shutdown: list[str] = field(default_factory=list)
     meta: str = None
 
     @classmethod
@@ -265,7 +267,7 @@ class NodeServiceConfig:
     node_id: int
     service: str
     data: NodeServiceData
-    files: Dict[str, str] = field(default_factory=dict)
+    files: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_proto(cls, proto: services_pb2.NodeServiceConfig) -> "NodeServiceConfig":
@@ -281,11 +283,11 @@ class NodeServiceConfig:
 class ServiceConfig:
     node_id: int
     service: str
-    files: List[str] = None
-    directories: List[str] = None
-    startup: List[str] = None
-    validate: List[str] = None
-    shutdown: List[str] = None
+    files: list[str] = None
+    directories: list[str] = None
+    startup: list[str] = None
+    validate: list[str] = None
+    shutdown: list[str] = None
 
     def to_proto(self) -> services_pb2.ServiceConfig:
         return services_pb2.ServiceConfig(
@@ -338,8 +340,8 @@ class InterfaceThroughput:
 @dataclass
 class ThroughputsEvent:
     session_id: int
-    bridge_throughputs: List[BridgeThroughput]
-    iface_throughputs: List[InterfaceThroughput]
+    bridge_throughputs: list[BridgeThroughput]
+    iface_throughputs: list[InterfaceThroughput]
 
     @classmethod
     def from_proto(cls, proto: core_pb2.ThroughputsEvent) -> "ThroughputsEvent":
@@ -427,19 +429,19 @@ class ConfigOption:
     label: str = None
     type: ConfigOptionType = None
     group: str = None
-    select: List[str] = None
+    select: list[str] = None
 
     @classmethod
     def from_dict(
-        cls, config: Dict[str, common_pb2.ConfigOption]
-    ) -> Dict[str, "ConfigOption"]:
+        cls, config: dict[str, common_pb2.ConfigOption]
+    ) -> dict[str, "ConfigOption"]:
         d = {}
         for key, value in config.items():
             d[key] = ConfigOption.from_proto(value)
         return d
 
     @classmethod
-    def to_dict(cls, config: Dict[str, "ConfigOption"]) -> Dict[str, str]:
+    def to_dict(cls, config: dict[str, "ConfigOption"]) -> dict[str, str]:
         return {k: v.value for k, v in config.items()}
 
     @classmethod
@@ -480,6 +482,8 @@ class Interface:
     mtu: int = None
     node_id: int = None
     net2_id: int = None
+    nem_id: int = None
+    nem_port: int = None
 
     @classmethod
     def from_proto(cls, proto: core_pb2.Interface) -> "Interface":
@@ -496,6 +500,8 @@ class Interface:
             mtu=proto.mtu,
             node_id=proto.node_id,
             net2_id=proto.net2_id,
+            nem_id=proto.nem_id,
+            nem_port=proto.nem_port,
         )
 
     def to_proto(self) -> core_pb2.Interface:
@@ -666,7 +672,7 @@ class EmaneModelConfig:
     node_id: int
     model: str
     iface_id: int = -1
-    config: Dict[str, ConfigOption] = None
+    config: dict[str, ConfigOption] = None
 
     @classmethod
     def from_proto(cls, proto: emane_pb2.GetEmaneModelConfig) -> "EmaneModelConfig":
@@ -720,8 +726,8 @@ class Node:
     type: NodeType = NodeType.DEFAULT
     model: str = None
     position: Position = Position(x=0, y=0)
-    services: Set[str] = field(default_factory=set)
-    config_services: Set[str] = field(default_factory=set)
+    services: set[str] = field(default_factory=set)
+    config_services: set[str] = field(default_factory=set)
     emane: str = None
     icon: str = None
     image: str = None
@@ -732,18 +738,19 @@ class Node:
     canvas: int = None
 
     # configurations
-    emane_model_configs: Dict[
-        Tuple[str, Optional[int]], Dict[str, ConfigOption]
+    emane_model_configs: dict[
+        tuple[str, Optional[int]], dict[str, ConfigOption]
     ] = field(default_factory=dict, repr=False)
-    wlan_config: Dict[str, ConfigOption] = field(default_factory=dict, repr=False)
-    mobility_config: Dict[str, ConfigOption] = field(default_factory=dict, repr=False)
-    service_configs: Dict[str, NodeServiceData] = field(
+    wlan_config: dict[str, ConfigOption] = field(default_factory=dict, repr=False)
+    wireless_config: dict[str, ConfigOption] = field(default_factory=dict, repr=False)
+    mobility_config: dict[str, ConfigOption] = field(default_factory=dict, repr=False)
+    service_configs: dict[str, NodeServiceData] = field(
         default_factory=dict, repr=False
     )
-    service_file_configs: Dict[str, Dict[str, str]] = field(
+    service_file_configs: dict[str, dict[str, str]] = field(
         default_factory=dict, repr=False
     )
-    config_service_configs: Dict[str, ConfigServiceData] = field(
+    config_service_configs: dict[str, ConfigServiceData] = field(
         default_factory=dict, repr=False
     )
 
@@ -770,7 +777,7 @@ class Node:
             id=proto.id,
             name=proto.name,
             type=NodeType(proto.type),
-            model=proto.model,
+            model=proto.model or None,
             position=Position.from_proto(proto.position),
             services=set(proto.services),
             config_services=set(proto.config_services),
@@ -788,6 +795,7 @@ class Node:
             service_file_configs=service_file_configs,
             config_service_configs=config_service_configs,
             emane_model_configs=emane_configs,
+            wireless_config=ConfigOption.from_dict(proto.wireless_config),
         )
 
     def to_proto(self) -> core_pb2.Node:
@@ -839,20 +847,21 @@ class Node:
             service_configs=service_configs,
             config_service_configs=config_service_configs,
             emane_configs=emane_configs,
+            wireless_config={k: v.to_proto() for k, v in self.wireless_config.items()},
         )
 
-    def set_wlan(self, config: Dict[str, str]) -> None:
+    def set_wlan(self, config: dict[str, str]) -> None:
         for key, value in config.items():
             option = ConfigOption(name=key, value=value)
             self.wlan_config[key] = option
 
-    def set_mobility(self, config: Dict[str, str]) -> None:
+    def set_mobility(self, config: dict[str, str]) -> None:
         for key, value in config.items():
             option = ConfigOption(name=key, value=value)
             self.mobility_config[key] = option
 
     def set_emane_model(
-        self, model: str, config: Dict[str, str], iface_id: int = None
+        self, model: str, config: dict[str, str], iface_id: int = None
     ) -> None:
         key = (model, iface_id)
         config_options = self.emane_model_configs.setdefault(key, {})
@@ -865,27 +874,25 @@ class Node:
 class Session:
     id: int = None
     state: SessionState = SessionState.DEFINITION
-    nodes: Dict[int, Node] = field(default_factory=dict)
-    links: List[Link] = field(default_factory=list)
+    nodes: dict[int, Node] = field(default_factory=dict)
+    links: list[Link] = field(default_factory=list)
     dir: str = None
     user: str = None
-    default_services: Dict[str, Set[str]] = field(default_factory=dict)
+    default_services: dict[str, set[str]] = field(default_factory=dict)
     location: SessionLocation = SessionLocation(
         x=0.0, y=0.0, z=0.0, lat=47.57917, lon=-122.13232, alt=2.0, scale=150.0
     )
-    hooks: Dict[str, Hook] = field(default_factory=dict)
-    metadata: Dict[str, str] = field(default_factory=dict)
+    hooks: dict[str, Hook] = field(default_factory=dict)
+    metadata: dict[str, str] = field(default_factory=dict)
     file: Path = None
-    options: Dict[str, ConfigOption] = field(default_factory=dict)
-    servers: List[Server] = field(default_factory=list)
+    options: dict[str, ConfigOption] = field(default_factory=dict)
+    servers: list[Server] = field(default_factory=list)
 
     @classmethod
     def from_proto(cls, proto: core_pb2.Session) -> "Session":
-        nodes: Dict[int, Node] = {x.id: Node.from_proto(x) for x in proto.nodes}
+        nodes: dict[int, Node] = {x.id: Node.from_proto(x) for x in proto.nodes}
         links = [Link.from_proto(x) for x in proto.links]
-        default_services = {
-            x.node_type: set(x.services) for x in proto.default_services
-        }
+        default_services = {x.model: set(x.services) for x in proto.default_services}
         hooks = {x.file: Hook.from_proto(x) for x in proto.hooks}
         file_path = Path(proto.file) if proto.file else None
         options = ConfigOption.from_dict(proto.options)
@@ -913,9 +920,9 @@ class Session:
         options = {k: v.to_proto() for k, v in self.options.items()}
         servers = [x.to_proto() for x in self.servers]
         default_services = []
-        for node_type, services in self.default_services.items():
+        for model, services in self.default_services.items():
             default_service = services_pb2.ServiceDefaults(
-                node_type=node_type, services=services
+                model=model, services=services
             )
             default_services.append(default_service)
         file = str(self.file) if self.file else None
@@ -981,7 +988,7 @@ class Session:
         self.links.append(link)
         return link
 
-    def set_options(self, config: Dict[str, str]) -> None:
+    def set_options(self, config: dict[str, str]) -> None:
         for key, value in config.items():
             option = ConfigOption(name=key, value=value)
             self.options[key] = option
@@ -989,9 +996,9 @@ class Session:
 
 @dataclass
 class CoreConfig:
-    services: List[Service] = field(default_factory=list)
-    config_services: List[ConfigService] = field(default_factory=list)
-    emane_models: List[str] = field(default_factory=list)
+    services: list[Service] = field(default_factory=list)
+    config_services: list[ConfigService] = field(default_factory=list)
+    emane_models: list[str] = field(default_factory=list)
 
     @classmethod
     def from_proto(cls, proto: core_pb2.GetConfigResponse) -> "CoreConfig":
@@ -1082,7 +1089,7 @@ class ConfigEvent:
     node_id: int
     object: str
     type: int
-    data_types: List[int]
+    data_types: list[int]
     data_values: str
     captions: str
     bitmap: str
@@ -1102,7 +1109,6 @@ class ConfigEvent:
             data_types=list(proto.data_types),
             data_values=proto.data_values,
             captions=proto.captions,
-            bitmap=proto.bitmap,
             possible_values=proto.possible_values,
             groups=proto.groups,
             iface_id=proto.iface_id,
@@ -1194,13 +1200,13 @@ class EmanePathlossesRequest:
         )
 
 
-@dataclass
+@dataclass(frozen=True)
 class MoveNodesRequest:
     session_id: int
     node_id: int
-    source: str = None
-    position: Position = None
-    geo: Geo = None
+    source: str = field(compare=False, default=None)
+    position: Position = field(compare=False, default=None)
+    geo: Geo = field(compare=False, default=None)
 
     def to_proto(self) -> core_pb2.MoveNodesRequest:
         position = self.position.to_proto() if self.position else None

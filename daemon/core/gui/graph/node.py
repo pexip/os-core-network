@@ -2,7 +2,7 @@ import functools
 import logging
 import tkinter as tk
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Optional
 
 import grpc
 from PIL.ImageTk import PhotoImage
@@ -16,6 +16,7 @@ from core.gui.dialogs.mobilityconfig import MobilityConfigDialog
 from core.gui.dialogs.nodeconfig import NodeConfigDialog
 from core.gui.dialogs.nodeconfigservice import NodeConfigServiceDialog
 from core.gui.dialogs.nodeservice import NodeServiceDialog
+from core.gui.dialogs.wirelessconfig import WirelessConfigDialog
 from core.gui.dialogs.wlanconfig import WlanConfigDialog
 from core.gui.frames.node import NodeInfoFrame
 from core.gui.graph import tags
@@ -61,17 +62,17 @@ class CanvasNode:
             state=self.app.manager.show_node_labels.state(),
         )
         self.tooltip: CanvasTooltip = CanvasTooltip(self.canvas)
-        self.edges: Set[CanvasEdge] = set()
-        self.ifaces: Dict[int, Interface] = {}
-        self.wireless_edges: Set[CanvasWirelessEdge] = set()
-        self.antennas: List[int] = []
-        self.antenna_images: Dict[int, PhotoImage] = {}
+        self.edges: set[CanvasEdge] = set()
+        self.ifaces: dict[int, Interface] = {}
+        self.wireless_edges: set[CanvasWirelessEdge] = set()
+        self.antennas: list[int] = []
+        self.antenna_images: dict[int, PhotoImage] = {}
         self.hidden: bool = False
         self.setup_bindings()
         self.context: tk.Menu = tk.Menu(self.canvas)
         themes.style_menu(self.context)
 
-    def position(self) -> Tuple[int, int]:
+    def position(self) -> tuple[int, int]:
         return self.canvas.coords(self.id)
 
     def next_iface_id(self) -> int:
@@ -219,6 +220,7 @@ class CanvasNode:
         # clear existing menu
         self.context.delete(0, tk.END)
         is_wlan = self.core_node.type == NodeType.WIRELESS_LAN
+        is_wireless = self.core_node.type == NodeType.WIRELESS
         is_emane = self.core_node.type == NodeType.EMANE
         is_mobility = is_wlan or is_emane
         if self.app.core.is_runtime():
@@ -230,6 +232,10 @@ class CanvasNode:
             if is_wlan:
                 self.context.add_command(
                     label="WLAN Config", command=self.show_wlan_config
+                )
+            if is_wireless:
+                self.context.add_command(
+                    label="Wireless Config", command=self.show_wireless_config
                 )
             if is_mobility and self.core_node.id in self.app.core.mobility_players:
                 self.context.add_command(
@@ -268,6 +274,10 @@ class CanvasNode:
                 self.context.add_command(
                     label="WLAN Config", command=self.show_wlan_config
                 )
+            if is_wireless:
+                self.context.add_command(
+                    label="Wireless Config", command=self.show_wireless_config
+                )
             if is_mobility:
                 self.context.add_command(
                     label="Mobility Config", command=self.show_mobility_config
@@ -298,7 +308,10 @@ class CanvasNode:
                 other_iface = edge.other_iface(self)
                 label = other_node.core_node.name
                 if other_iface:
-                    label = f"{label}:{other_iface.name}"
+                    iface_label = other_iface.id
+                    if other_iface.name:
+                        iface_label = other_iface.name
+                    label = f"{label}:{iface_label}"
                 func_unlink = functools.partial(self.click_unlink, edge)
                 unlink_menu.add_command(label=label, command=func_unlink)
             themes.style_menu(unlink_menu)
@@ -341,6 +354,10 @@ class CanvasNode:
 
     def show_config(self) -> None:
         dialog = NodeConfigDialog(self.app, self)
+        dialog.show()
+
+    def show_wireless_config(self) -> None:
+        dialog = WirelessConfigDialog(self.app, self)
         dialog.show()
 
     def show_wlan_config(self) -> None:
@@ -526,7 +543,7 @@ class ShadowNode:
         self.canvas.shadow_nodes[self.id] = self
         self.canvas.shadow_core_nodes[self.node.core_node.id] = self
 
-    def position(self) -> Tuple[int, int]:
+    def position(self) -> tuple[int, int]:
         return self.canvas.coords(self.id)
 
     def should_delete(self) -> bool:

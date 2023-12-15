@@ -5,7 +5,7 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from mako import exceptions
 from mako.lookup import TemplateLookup
@@ -67,7 +67,7 @@ class ConfigService(abc.ABC):
     validation_timer: int = 5
 
     # directories to shadow and copy files from
-    shadow_directories: List[ShadowDir] = []
+    shadow_directories: list[ShadowDir] = []
 
     def __init__(self, node: CoreNode) -> None:
         """
@@ -79,9 +79,9 @@ class ConfigService(abc.ABC):
         class_file = inspect.getfile(self.__class__)
         templates_path = Path(class_file).parent.joinpath(TEMPLATES_DIR)
         self.templates: TemplateLookup = TemplateLookup(directories=templates_path)
-        self.config: Dict[str, Configuration] = {}
-        self.custom_templates: Dict[str, str] = {}
-        self.custom_config: Dict[str, str] = {}
+        self.config: dict[str, Configuration] = {}
+        self.custom_templates: dict[str, str] = {}
+        self.custom_config: dict[str, str] = {}
         configs = self.default_configs[:]
         self._define_config(configs)
 
@@ -108,47 +108,47 @@ class ConfigService(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def directories(self) -> List[str]:
+    def directories(self) -> list[str]:
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def files(self) -> List[str]:
+    def files(self) -> list[str]:
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def default_configs(self) -> List[Configuration]:
+    def default_configs(self) -> list[Configuration]:
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def modes(self) -> Dict[str, Dict[str, str]]:
+    def modes(self) -> dict[str, dict[str, str]]:
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def executables(self) -> List[str]:
+    def executables(self) -> list[str]:
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def startup(self) -> List[str]:
+    def startup(self) -> list[str]:
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def shutdown(self) -> List[str]:
+    def shutdown(self) -> list[str]:
         raise NotImplementedError
 
     @property
@@ -276,7 +276,7 @@ class ConfigService(abc.ABC):
                     f"failure to create service directory: {directory}"
                 )
 
-    def data(self) -> Dict[str, Any]:
+    def data(self) -> dict[str, Any]:
         """
         Returns key/value data, used when rendering file templates.
 
@@ -303,7 +303,7 @@ class ConfigService(abc.ABC):
         """
         raise CoreError(f"service({self.name}) unknown template({name})")
 
-    def get_templates(self) -> Dict[str, str]:
+    def get_templates(self) -> dict[str, str]:
         """
         Retrieves mapping of file names to templates for all cases, which
         includes custom templates, file templates, and text templates.
@@ -331,6 +331,33 @@ class ConfigService(abc.ABC):
             templates[file] = template
         return templates
 
+    def get_rendered_templates(self) -> dict[str, str]:
+        templates = {}
+        data = self.data()
+        for file in sorted(self.files):
+            rendered = self._get_rendered_template(file, data)
+            templates[file] = rendered
+        return templates
+
+    def _get_rendered_template(self, file: str, data: dict[str, Any]) -> str:
+        file_path = Path(file)
+        template_path = get_template_path(file_path)
+        if file in self.custom_templates:
+            text = self.custom_templates[file]
+            rendered = self.render_text(text, data)
+        elif self.templates.has_template(template_path):
+            rendered = self.render_template(template_path, data)
+        else:
+            try:
+                text = self.get_text_template(file)
+            except Exception as e:
+                raise ConfigServiceTemplateError(
+                    f"node({self.node.name}) service({self.name}) file({file}) "
+                    f"failure getting template: {e}"
+                )
+            rendered = self.render_text(text, data)
+        return rendered
+
     def create_files(self) -> None:
         """
         Creates service files inside associated node.
@@ -342,22 +369,8 @@ class ConfigService(abc.ABC):
             logger.debug(
                 "node(%s) service(%s) template(%s)", self.node.name, self.name, file
             )
+            rendered = self._get_rendered_template(file, data)
             file_path = Path(file)
-            template_path = get_template_path(file_path)
-            if file in self.custom_templates:
-                text = self.custom_templates[file]
-                rendered = self.render_text(text, data)
-            elif self.templates.has_template(template_path):
-                rendered = self.render_template(template_path, data)
-            else:
-                try:
-                    text = self.get_text_template(file)
-                except Exception as e:
-                    raise ConfigServiceTemplateError(
-                        f"node({self.node.name}) service({self.name}) file({file}) "
-                        f"failure getting template: {e}"
-                    )
-                rendered = self.render_text(text, data)
             self.node.create_file(file_path, rendered)
 
     def run_startup(self, wait: bool) -> None:
@@ -413,7 +426,7 @@ class ConfigService(abc.ABC):
                     f"node({self.node.name}) service({self.name}) failed to validate"
                 )
 
-    def _render(self, template: Template, data: Dict[str, Any] = None) -> str:
+    def _render(self, template: Template, data: dict[str, Any] = None) -> str:
         """
         Renders template providing all associated data to template.
 
@@ -427,7 +440,7 @@ class ConfigService(abc.ABC):
             node=self.node, config=self.render_config(), **data
         )
 
-    def render_text(self, text: str, data: Dict[str, Any] = None) -> str:
+    def render_text(self, text: str, data: dict[str, Any] = None) -> str:
         """
         Renders text based template providing all associated data to template.
 
@@ -445,7 +458,7 @@ class ConfigService(abc.ABC):
                 f"{exceptions.text_error_template().render_unicode()}"
             )
 
-    def render_template(self, template_path: str, data: Dict[str, Any] = None) -> str:
+    def render_template(self, template_path: str, data: dict[str, Any] = None) -> str:
         """
         Renders file based template  providing all associated data to template.
 
@@ -459,10 +472,10 @@ class ConfigService(abc.ABC):
         except Exception:
             raise CoreError(
                 f"node({self.node.name}) service({self.name}) file({template_path})"
-                f"{exceptions.text_error_template().render_template()}"
+                f"{exceptions.text_error_template().render_unicode()}"
             )
 
-    def _define_config(self, configs: List[Configuration]) -> None:
+    def _define_config(self, configs: list[Configuration]) -> None:
         """
         Initializes default configuration data.
 
@@ -472,7 +485,7 @@ class ConfigService(abc.ABC):
         for config in configs:
             self.config[config.id] = config
 
-    def render_config(self) -> Dict[str, str]:
+    def render_config(self) -> dict[str, str]:
         """
         Returns configuration data key/value pairs for rendering a template.
 
@@ -483,7 +496,7 @@ class ConfigService(abc.ABC):
         else:
             return {k: v.default for k, v in self.config.items()}
 
-    def set_config(self, data: Dict[str, str]) -> None:
+    def set_config(self, data: dict[str, str]) -> None:
         """
         Set configuration data from key/value pairs.
 

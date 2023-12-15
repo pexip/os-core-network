@@ -1,11 +1,8 @@
 # CORE Developer's Guide
 
-* Table of Contents
-{:toc}
+## Overview
 
-## Repository Overview
-
-The CORE source consists of several different programming languages for
+The CORE source consists of several programming languages for
 historical reasons. Current development focuses on the Python modules and
 daemon. Here is a brief description of the source directories.
 
@@ -13,7 +10,6 @@ daemon. Here is a brief description of the source directories.
 |-----------|--------------------------------------------------------------------------------------|
 | daemon    | Python CORE daemon/gui code that handles receiving API calls and creating containers |
 | docs      | Markdown Documentation currently hosted on GitHub                                    |
-| gui       | Tcl/Tk GUI                                                                           |
 | man       | Template files for creating man pages for various CORE command line utilities        |
 | netns     | C program for creating CORE containers                                               |
 
@@ -55,10 +51,7 @@ conveniently run tests, etc.
 # run core-daemon
 sudo core-daemon
 
-# run python gui
-core-pygui
-
-# run tcl gui
+# run gui
 core-gui
 
 # run mocked unit tests
@@ -69,7 +62,7 @@ inv test-mock
 ## Linux Network Namespace Commands
 
 Linux network namespace containers are often managed using the *Linux Container Tools* or *lxc-tools* package.
-The lxc-tools website is available here http://lxc.sourceforge.net/ for more information.  CORE does not use these
+The lxc-tools website is available here http://lxc.sourceforge.net/ for more information. CORE does not use these
 management utilities, but includes its own set of tools for instantiating and configuring network namespace containers.
 This section describes these tools.
 
@@ -104,7 +97,7 @@ vcmd -c /tmp/pycore.50160/n1 -- /sbin/ip -4 ro
 
 A script named *core-cleanup* is provided to clean up any running CORE emulations. It will attempt to kill any
 remaining vnoded processes, kill any EMANE processes, remove the :file:`/tmp/pycore.*` session directories, and remove
-any bridges or *nftables* rules.  With a *-d* option, it will also kill any running CORE daemon.
+any bridges or *nftables* rules. With a *-d* option, it will also kill any running CORE daemon.
 
 ### netns command
 

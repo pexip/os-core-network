@@ -1,9 +1,6 @@
-# CORE Services
+# Services (Deprecated)
 
-* Table of Contents
-{:toc}
-
-## Services
+## Overview
 
 CORE uses the concept of services to specify what processes or scripts run on a
 node when it is started. Layer-3 nodes such as routers and PCs are defined by
@@ -15,9 +12,11 @@ set of default services. Each service defines the per-node directories,
 configuration files, startup index, starting commands, validation commands,
 shutdown commands, and meta-data associated with a node.
 
-> **NOTE:** **Network namespace nodes do not undergo the normal Linux boot process**
-   using the **init**, **upstart**, or **systemd** frameworks. These
-   lightweight nodes use configured CORE *services*.
+!!! note
+
+    **Network namespace nodes do not undergo the normal Linux boot process**
+    using the **init**, **upstart**, or **systemd** frameworks. These
+    lightweight nodes use configured CORE *services*.
 
 ## Available Services
 
@@ -63,13 +62,6 @@ toolbar, or choose *Node types...* from the  *Session* menu. Note that
 any new services selected are not applied to existing nodes if the nodes have
 been customized.
 
-The node types are saved in a **~/.core/nodes.conf** file, not with the
-**.imn** file. Keep this in mind when changing the default services for
-existing node types; it may be better to simply create a new node type. It is
-recommended that you do not change the default built-in node types. The
-**nodes.conf** file can be copied between CORE machines to save your custom
-types.
-
 ## Customizing a Service
 
 A service can be fully customized for a particular node. From the node's
@@ -78,11 +70,13 @@ the service customization dialog for that service.
 The dialog has three tabs for configuring the different aspects of the service:
 files, directories, and startup/shutdown.
 
-> **NOTE:** A **yellow** customize icon next to a service indicates that service
-   requires customization (e.g. the *Firewall* service).
-   A **green** customize icon indicates that a custom configuration exists.
-   Click the *Defaults* button when customizing a service to remove any
-   customizations.
+!!! note
+
+    A **yellow** customize icon next to a service indicates that service
+    requires customization (e.g. the *Firewall* service).
+    A **green** customize icon indicates that a custom configuration exists.
+    Click the *Defaults* button when customizing a service to remove any
+    customizations.
 
 The Files tab is used to display or edit the configuration files or scripts that
 are used for this service. Files can be selected from a drop-down list, and
@@ -97,10 +91,11 @@ per-node directories that are defined by the services. For example, the
 the Zebra service, because Quagga running on each node needs to write separate
 PID files to that directory.
 
-> **NOTE:** The **/var/log** and **/var/run** directories are
-   mounted uniquely per-node by default.
-   Per-node mount targets can be found in **/tmp/pycore.nnnnn/nN.conf/**
-   (where *nnnnn* is the session number and *N* is the node number.)
+!!! note
+
+    The **/var/log** and **/var/run** directories are
+    mounted uniquely per-node by default.
+    Per-node mount targets can be found in **/tmp/pycore.<session id>/<node name>.conf/**
 
 The Startup/shutdown tab lists commands that are used to start and stop this
 service. The startup index allows configuring when this service starts relative
@@ -127,8 +122,10 @@ if a process is running and return zero when found. When a validate command
 produces a non-zero return value, an exception is generated, which will cause
 an error to be displayed in the Check Emulation Light.
 
-> **NOTE:** To start, stop, and restart services during run-time, right-click a
-   node and use the *Services...* menu.
+!!! note
+
+    To start, stop, and restart services during run-time, right-click a
+    node and use the *Services...* menu.
 
 ## New Services
 
@@ -145,27 +142,27 @@ ideas for a service before adding a new service type.
 
 ### Creating New Services
 
+!!! note
+
+    The directory name used in **custom_services_dir** below should be unique and
+    should not correspond to any existing Python module name. For example, don't
+    use the name **subprocess** or **services**.
+
 1. Modify the example service shown below
    to do what you want. It could generate config/script files, mount per-node
    directories, start processes/scripts, etc. sample.py is a Python file that
    defines one or more classes to be imported. You can create multiple Python
    files that will be imported.
 
-2. Put these files in a directory such as /home/username/.core/myservices
-   Note that the last component of this directory name **myservices** should not
-   be named something like **services** which conflicts with an existing module.
+2. Put these files in a directory such as `/home/<user>/.coregui/custom_services`
+   Note that the last component of this directory name **custom_services** should not
+   be named the same as any python module, due to naming conflicts.
 
-3. Add a **custom_services_dir = /home/username/.core/myservices** entry to the
+3. Add a **custom_services_dir = `/home/<user>/.coregui/custom_services`** entry to the
    /etc/core/core.conf file.
 
-   **NOTE:**
-   The directory name used in **custom_services_dir** should be unique and
-   should not correspond to
-   any existing Python module name. For example, don't use the name **subprocess**
-   or **services**.
-
 4. Restart the CORE daemon (core-daemon). Any import errors (Python syntax)
-   should be displayed in the /var/log/core-daemon.log log file (or on screen).
+   should be displayed in the daemon output.
 
 5. Start using your custom service on your nodes. You can create a new node
    type that uses your service, or change the default services for an existing

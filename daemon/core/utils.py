@@ -16,22 +16,12 @@ import shlex
 import shutil
 import sys
 import threading
+from collections import OrderedDict
+from collections.abc import Iterable
 from pathlib import Path
+from queue import Queue
 from subprocess import PIPE, STDOUT, Popen
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Generic, Optional, TypeVar, Union
 
 import netaddr
 
@@ -68,7 +58,7 @@ def execute_script(coreemu: "CoreEmu", file_path: Path, args: str) -> None:
 
 
 def execute_file(
-    path: Path, exec_globals: Dict[str, str] = None, exec_locals: Dict[str, str] = None
+    path: Path, exec_globals: dict[str, str] = None, exec_locals: dict[str, str] = None
 ) -> None:
     """
     Provides a way to execute a file.
@@ -97,7 +87,7 @@ def hashkey(value: Union[str, int]) -> int:
     """
     if isinstance(value, int):
         value = str(value)
-    value = value.encode("utf-8")
+    value = value.encode()
     return int(hashlib.sha256(value).hexdigest(), 16)
 
 
@@ -129,7 +119,7 @@ def _valid_module(path: Path) -> bool:
     return True
 
 
-def _is_class(module: Any, member: Type, clazz: Type) -> bool:
+def _is_class(module: Any, member: type, clazz: type) -> bool:
     """
     Validates if a module member is a class and an instance of a CoreService.
 
@@ -173,7 +163,7 @@ def which(command: str, required: bool) -> str:
     return found_path
 
 
-def make_tuple_fromstr(s: str, value_type: Callable[[str], T]) -> Tuple[T]:
+def make_tuple_fromstr(s: str, value_type: Callable[[str], T]) -> tuple[T]:
     """
     Create a tuple from a string.
 
@@ -191,7 +181,7 @@ def make_tuple_fromstr(s: str, value_type: Callable[[str], T]) -> Tuple[T]:
     return tuple(value_type(i) for i in values)
 
 
-def mute_detach(args: str, **kwargs: Dict[str, Any]) -> int:
+def mute_detach(args: str, **kwargs: dict[str, Any]) -> int:
     """
     Run a muted detached process by forking it.
 
@@ -208,14 +198,13 @@ def mute_detach(args: str, **kwargs: Dict[str, Any]) -> int:
 
 def cmd(
     args: str,
-    env: Dict[str, str] = None,
+    env: dict[str, str] = None,
     cwd: Path = None,
     wait: bool = True,
     shell: bool = False,
 ) -> str:
     """
-    Execute a command on the host and return a tuple containing the exit status and
-    result string. stderr output is folded into the stdout result string.
+    Execute a command on the host and returns the combined stderr stdout output.
 
     :param args: command arguments
     :param env: environment to run command with
@@ -235,9 +224,9 @@ def cmd(
         p = Popen(args, stdout=output, stderr=output, env=env, cwd=cwd, shell=shell)
         if wait:
             stdout, stderr = p.communicate()
-            stdout = stdout.decode("utf-8").strip()
-            stderr = stderr.decode("utf-8").strip()
-            status = p.wait()
+            stdout = stdout.decode().strip()
+            stderr = stderr.decode().strip()
+            status = p.returncode
             if status != 0:
                 raise CoreCommandError(status, input_args, stdout, stderr)
             return stdout
@@ -246,6 +235,25 @@ def cmd(
     except OSError as e:
         logger.error("cmd error: %s", e.strerror)
         raise CoreCommandError(1, input_args, "", e.strerror)
+
+
+def run_cmds(args: list[str], wait: bool = True, shell: bool = False) -> list[str]:
+    """
+    Execute a series of commands on the host and returns a list of the combined stderr
+    stdout output.
+
+    :param args: command arguments
+    :param wait: True to wait for status, False otherwise
+    :param shell: True to use shell, False otherwise
+    :return: combined stdout and stderr
+    :raises CoreCommandError: when there is a non-zero exit status or the file to
+        execute is not found
+    """
+    outputs = []
+    for arg in args:
+        output = cmd(arg, wait=wait, shell=shell)
+        outputs.append(output)
+    return outputs
 
 
 def file_munge(pathname: str, header: str, text: str) -> None:
@@ -274,7 +282,7 @@ def file_demunge(pathname: str, header: str) -> None:
     :param header: header text to target for removal
     :return: nothing
     """
-    with open(pathname, "r") as read_file:
+    with open(pathname) as read_file:
         lines = read_file.readlines()
 
     start = None
@@ -328,7 +336,7 @@ def sysctl_devname(devname: str) -> Optional[str]:
     return devname.replace(".", "/")
 
 
-def load_config(file_path: Path, d: Dict[str, str]) -> None:
+def load_config(file_path: Path, d: dict[str, str]) -> None:
     """
     Read key=value pairs from a file, into a dict. Skip comments; strip newline
     characters and spacing.
@@ -349,7 +357,7 @@ def load_config(file_path: Path, d: Dict[str, str]) -> None:
             logger.exception("error reading file to dict: %s", file_path)
 
 
-def load_module(import_statement: str, clazz: Generic[T]) -> List[T]:
+def load_module(import_statement: str, clazz: Generic[T]) -> list[T]:
     classes = []
     try:
         module = importlib.import_module(import_statement)
@@ -364,7 +372,7 @@ def load_module(import_statement: str, clazz: Generic[T]) -> List[T]:
     return classes
 
 
-def load_classes(path: Path, clazz: Generic[T]) -> List[T]:
+def load_classes(path: Path, clazz: Generic[T]) -> list[T]:
     """
     Dynamically load classes for use within CORE.
 
@@ -405,9 +413,100 @@ def load_logging_config(config_path: Path) -> None:
     logging.config.dictConfig(log_config)
 
 
+def run_cmds_threaded(
+    node_cmds: list[tuple["CoreNode", list[str]]],
+    wait: bool = True,
+    shell: bool = False,
+    workers: int = None,
+) -> tuple[dict[int, list[str]], list[Exception]]:
+    """
+    Run the set of commands for the node provided. Each node will
+    run the commands within the context of a threadpool.
+
+    :param node_cmds: list of tuples of nodes and commands to run within them
+    :param wait: True to wait for status, False otherwise
+    :param shell: True to run shell like, False otherwise
+    :param workers: number of workers for threadpool, uses library default otherwise
+    :return: tuple including dict of node id to list of command output and a list of
+        exceptions if any
+    """
+
+    def _node_cmds(
+        _target: "CoreNode", _cmds: list[str], _wait: bool, _shell: bool
+    ) -> list[str]:
+        cmd_outputs = []
+        for _cmd in _cmds:
+            output = _target.cmd(_cmd, wait=_wait, shell=_shell)
+            cmd_outputs.append(output)
+        return cmd_outputs
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = []
+        node_mappings = {}
+        for node, cmds in node_cmds:
+            future = executor.submit(_node_cmds, node, cmds, wait, shell)
+            node_mappings[future] = node
+            futures.append(future)
+        outputs = {}
+        exceptions = []
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                result = future.result()
+                node = node_mappings[future]
+                outputs[node.id] = result
+            except Exception as e:
+                logger.exception("thread pool exception")
+                exceptions.append(e)
+    return outputs, exceptions
+
+
+def run_cmds_mp(
+    node_cmds: list[tuple["CoreNode", list[str]]],
+    wait: bool = True,
+    shell: bool = False,
+    workers: int = None,
+) -> tuple[dict[int, list[str]], list[Exception]]:
+    """
+    Run the set of commands for the node provided. Each node will
+    run the commands within the context of a process pool. This will not work
+    for distributed nodes and throws an exception when encountered.
+
+    :param node_cmds: list of tuples of nodes and commands to run within them
+    :param wait: True to wait for status, False otherwise
+    :param shell: True to run shell like, False otherwise
+    :param workers: number of workers for threadpool, uses library default otherwise
+    :return: tuple including dict of node id to list of command output and a list of
+        exceptions if any
+    :raises CoreError: when a distributed node is provided as input
+    """
+    with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+        futures = []
+        node_mapping = {}
+        for node, cmds in node_cmds:
+            node_cmds = [node.create_cmd(x) for x in cmds]
+            if node.server:
+                raise CoreError(
+                    f"{node.name} uses a distributed server and not supported"
+                )
+            future = executor.submit(run_cmds, node_cmds, wait=wait, shell=shell)
+            node_mapping[future] = node
+            futures.append(future)
+        exceptions = []
+        outputs = {}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                result = future.result()
+                node = node_mapping[future]
+                outputs[node.id] = result
+            except Exception as e:
+                logger.exception("thread pool exception")
+                exceptions.append(e)
+    return outputs, exceptions
+
+
 def threadpool(
-    funcs: List[Tuple[Callable, Iterable[Any], Dict[Any, Any]]], workers: int = 10
-) -> Tuple[List[Any], List[Exception]]:
+    funcs: list[tuple[Callable, Iterable[Any], dict[Any, Any]]], workers: int = 10
+) -> tuple[list[Any], list[Exception]]:
     """
     Run provided functions, arguments, and keywords within a threadpool
     collecting results and exceptions.
@@ -460,7 +559,7 @@ def iface_config_id(node_id: int, iface_id: int = None) -> int:
         return node_id
 
 
-def parse_iface_config_id(config_id: int) -> Tuple[int, Optional[int]]:
+def parse_iface_config_id(config_id: int) -> tuple[int, Optional[int]]:
     """
     Parses configuration id, that may be potentially derived from an interface for a
     node.
@@ -474,3 +573,19 @@ def parse_iface_config_id(config_id: int) -> Tuple[int, Optional[int]]:
         iface_id = config_id % IFACE_CONFIG_FACTOR
         node_id = config_id // IFACE_CONFIG_FACTOR
     return node_id, iface_id
+
+
+class SetQueue(Queue):
+    """
+    Set backed queue to avoid duplicate submissions.
+    """
+
+    def _init(self, maxsize):
+        self.queue: OrderedDict = OrderedDict()
+
+    def _put(self, item):
+        self.queue[item] = None
+
+    def _get(self):
+        key, _ = self.queue.popitem(last=False)
+        return key

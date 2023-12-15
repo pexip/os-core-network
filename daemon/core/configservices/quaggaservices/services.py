@@ -1,18 +1,29 @@
 import abc
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from core.config import Configuration
 from core.configservice.base import ConfigService, ConfigServiceMode
 from core.emane.nodes import EmaneNet
-from core.nodes.base import CoreNodeBase
+from core.nodes.base import CoreNodeBase, NodeBase
 from core.nodes.interface import DEFAULT_MTU, CoreInterface
 from core.nodes.network import PtpNet, WlanNode
 from core.nodes.physical import Rj45Node
+from core.nodes.wireless import WirelessNode
 
 logger = logging.getLogger(__name__)
 GROUP: str = "Quagga"
 QUAGGA_STATE_DIR: str = "/var/run/quagga"
+
+
+def is_wireless(node: NodeBase) -> bool:
+    """
+    Check if the node is a wireless type node.
+
+    :param node: node to check type for
+    :return: True if wireless type, False otherwise
+    """
+    return isinstance(node, (WlanNode, EmaneNet, WirelessNode))
 
 
 def has_mtu_mismatch(iface: CoreInterface) -> bool:
@@ -73,26 +84,26 @@ def rj45_check(iface: CoreInterface) -> bool:
 class Zebra(ConfigService):
     name: str = "zebra"
     group: str = GROUP
-    directories: List[str] = ["/usr/local/etc/quagga", "/var/run/quagga"]
-    files: List[str] = [
+    directories: list[str] = ["/usr/local/etc/quagga", "/var/run/quagga"]
+    files: list[str] = [
         "/usr/local/etc/quagga/Quagga.conf",
         "quaggaboot.sh",
         "/usr/local/etc/quagga/vtysh.conf",
     ]
-    executables: List[str] = ["zebra"]
-    dependencies: List[str] = []
-    startup: List[str] = ["bash quaggaboot.sh zebra"]
-    validate: List[str] = ["pidof zebra"]
-    shutdown: List[str] = ["killall zebra"]
+    executables: list[str] = ["zebra"]
+    dependencies: list[str] = []
+    startup: list[str] = ["bash quaggaboot.sh zebra"]
+    validate: list[str] = ["pidof zebra"]
+    shutdown: list[str] = ["killall zebra"]
     validation_mode: ConfigServiceMode = ConfigServiceMode.BLOCKING
-    default_configs: List[Configuration] = []
-    modes: Dict[str, Dict[str, str]] = {}
+    default_configs: list[Configuration] = []
+    modes: dict[str, dict[str, str]] = {}
 
-    def data(self) -> Dict[str, Any]:
-        quagga_bin_search = self.node.session.options.get_config(
+    def data(self) -> dict[str, Any]:
+        quagga_bin_search = self.node.session.options.get(
             "quagga_bin_search", default="/usr/local/bin /usr/bin /usr/lib/quagga"
         ).strip('"')
-        quagga_sbin_search = self.node.session.options.get_config(
+        quagga_sbin_search = self.node.session.options.get(
             "quagga_sbin_search", default="/usr/local/sbin /usr/sbin /usr/lib/quagga"
         ).strip('"')
         quagga_state_dir = QUAGGA_STATE_DIR
@@ -142,16 +153,16 @@ class Zebra(ConfigService):
 
 class QuaggaService(abc.ABC):
     group: str = GROUP
-    directories: List[str] = []
-    files: List[str] = []
-    executables: List[str] = []
-    dependencies: List[str] = ["zebra"]
-    startup: List[str] = []
-    validate: List[str] = []
-    shutdown: List[str] = []
+    directories: list[str] = []
+    files: list[str] = []
+    executables: list[str] = []
+    dependencies: list[str] = ["zebra"]
+    startup: list[str] = []
+    validate: list[str] = []
+    shutdown: list[str] = []
     validation_mode: ConfigServiceMode = ConfigServiceMode.BLOCKING
-    default_configs: List[Configuration] = []
-    modes: Dict[str, Dict[str, str]] = {}
+    default_configs: list[Configuration] = []
+    modes: dict[str, dict[str, str]] = {}
     ipv4_routing: bool = False
     ipv6_routing: bool = False
 
@@ -172,8 +183,8 @@ class Ospfv2(QuaggaService, ConfigService):
     """
 
     name: str = "OSPFv2"
-    validate: List[str] = ["pidof ospfd"]
-    shutdown: List[str] = ["killall ospfd"]
+    validate: list[str] = ["pidof ospfd"]
+    shutdown: list[str] = ["killall ospfd"]
     ipv4_routing: bool = True
 
     def quagga_iface_config(self, iface: CoreInterface) -> str:
@@ -223,8 +234,8 @@ class Ospfv3(QuaggaService, ConfigService):
     """
 
     name: str = "OSPFv3"
-    shutdown: List[str] = ["killall ospf6d"]
-    validate: List[str] = ["pidof ospf6d"]
+    shutdown: list[str] = ["killall ospf6d"]
+    validate: list[str] = ["pidof ospf6d"]
     ipv4_routing: bool = True
     ipv6_routing: bool = True
 
@@ -265,7 +276,7 @@ class Ospfv3mdr(Ospfv3):
 
     def quagga_iface_config(self, iface: CoreInterface) -> str:
         config = super().quagga_iface_config(iface)
-        if isinstance(iface.net, (WlanNode, EmaneNet)):
+        if is_wireless(iface.net):
             config = self.clean_text(
                 f"""
                 {config}
@@ -289,15 +300,12 @@ class Bgp(QuaggaService, ConfigService):
     """
 
     name: str = "BGP"
-    shutdown: List[str] = ["killall bgpd"]
-    validate: List[str] = ["pidof bgpd"]
+    shutdown: list[str] = ["killall bgpd"]
+    validate: list[str] = ["pidof bgpd"]
     ipv4_routing: bool = True
     ipv6_routing: bool = True
 
     def quagga_config(self) -> str:
-        return ""
-
-    def quagga_iface_config(self, iface: CoreInterface) -> str:
         router_id = get_router_id(self.node)
         text = f"""
         ! BGP configuration
@@ -311,6 +319,9 @@ class Bgp(QuaggaService, ConfigService):
         """
         return self.clean_text(text)
 
+    def quagga_iface_config(self, iface: CoreInterface) -> str:
+        return ""
+
 
 class Rip(QuaggaService, ConfigService):
     """
@@ -318,8 +329,8 @@ class Rip(QuaggaService, ConfigService):
     """
 
     name: str = "RIP"
-    shutdown: List[str] = ["killall ripd"]
-    validate: List[str] = ["pidof ripd"]
+    shutdown: list[str] = ["killall ripd"]
+    validate: list[str] = ["pidof ripd"]
     ipv4_routing: bool = True
 
     def quagga_config(self) -> str:
@@ -343,8 +354,8 @@ class Ripng(QuaggaService, ConfigService):
     """
 
     name: str = "RIPNG"
-    shutdown: List[str] = ["killall ripngd"]
-    validate: List[str] = ["pidof ripngd"]
+    shutdown: list[str] = ["killall ripngd"]
+    validate: list[str] = ["pidof ripngd"]
     ipv6_routing: bool = True
 
     def quagga_config(self) -> str:
@@ -369,8 +380,8 @@ class Babel(QuaggaService, ConfigService):
     """
 
     name: str = "Babel"
-    shutdown: List[str] = ["killall babeld"]
-    validate: List[str] = ["pidof babeld"]
+    shutdown: list[str] = ["killall babeld"]
+    validate: list[str] = ["pidof babeld"]
     ipv6_routing: bool = True
 
     def quagga_config(self) -> str:
@@ -390,7 +401,7 @@ class Babel(QuaggaService, ConfigService):
         return self.render_text(text, data)
 
     def quagga_iface_config(self, iface: CoreInterface) -> str:
-        if isinstance(iface.net, (WlanNode, EmaneNet)):
+        if is_wireless(iface.net):
             text = """
             babel wireless
             no babel split-horizon
@@ -409,8 +420,8 @@ class Xpimd(QuaggaService, ConfigService):
     """
 
     name: str = "Xpimd"
-    shutdown: List[str] = ["killall xpimd"]
-    validate: List[str] = ["pidof xpimd"]
+    shutdown: list[str] = ["killall xpimd"]
+    validate: list[str] = ["pidof xpimd"]
     ipv4_routing: bool = True
 
     def quagga_config(self) -> str:

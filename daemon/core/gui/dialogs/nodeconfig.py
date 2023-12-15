@@ -2,7 +2,7 @@ import logging
 import tkinter as tk
 from functools import partial
 from tkinter import messagebox, ttk
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Optional
 
 import netaddr
 from PIL.ImageTk import PhotoImage
@@ -190,7 +190,7 @@ class NodeConfigDialog(Dialog):
         if self.node.server:
             server = self.node.server
         self.server: tk.StringVar = tk.StringVar(value=server)
-        self.ifaces: Dict[int, InterfaceData] = {}
+        self.ifaces: dict[int, InterfaceData] = {}
         self.draw()
 
     def draw(self) -> None:
@@ -230,13 +230,8 @@ class NodeConfigDialog(Dialog):
         if nutils.is_model(self.node):
             label = ttk.Label(frame, text="Type")
             label.grid(row=row, column=0, sticky=tk.EW, padx=PADX, pady=PADY)
-            combobox = ttk.Combobox(
-                frame,
-                textvariable=self.type,
-                values=list(nutils.NODE_MODELS),
-                state=combo_state,
-            )
-            combobox.grid(row=row, column=1, sticky=tk.EW)
+            entry = ttk.Entry(frame, textvariable=self.type, state=tk.DISABLED)
+            entry.grid(row=row, column=1, sticky=tk.EW)
             row += 1
 
         # container image field
@@ -275,7 +270,7 @@ class NodeConfigDialog(Dialog):
             ifaces_scroll.listbox.bind("<<ListboxSelect>>", self.iface_select)
 
         # interfaces
-        if self.canvas_node.ifaces:
+        if nutils.is_container(self.node):
             self.draw_ifaces()
 
         self.draw_spacer()
