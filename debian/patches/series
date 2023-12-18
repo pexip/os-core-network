@@ -1,2 +1,3 @@
 pexip_fix_pyproject.diff
 pexip_fix_sysctl_handling.diff
+pexip/dataclass_fixups.patch

@@ -1,0 +1,49 @@
+Index: os-core-network/daemon/core/api/grpc/wrappers.py
+===================================================================
+--- os-core-network.orig/daemon/core/api/grpc/wrappers.py
++++ os-core-network/daemon/core/api/grpc/wrappers.py
+@@ -719,7 +719,7 @@ class Node:
+     name: str = None
+     type: NodeType = NodeType.DEFAULT
+     model: str = None
+-    position: Position = Position(x=0, y=0)
++    position: Position = field(default_factory=Position)
+     services: Set[str] = field(default_factory=set)
+     config_services: Set[str] = field(default_factory=set)
+     emane: str = None
+@@ -861,6 +861,11 @@ class Node:
+             config_options[key] = option
+ 
+ 
++def default_sessionlocation():
++    return SessionLocation(
++        x=0.0, y=0.0, z=0.0, lat=47.57917, lon=-122.13232, alt=2.0, scale=150.0
++    )
++
+ @dataclass
+ class Session:
+     id: int = None
+@@ -870,9 +875,7 @@ class Session:
+     dir: str = None
+     user: str = None
+     default_services: Dict[str, Set[str]] = field(default_factory=dict)
+-    location: SessionLocation = SessionLocation(
+-        x=0.0, y=0.0, z=0.0, lat=47.57917, lon=-122.13232, alt=2.0, scale=150.0
+-    )
++    location: SessionLocation = field(default_factory=default_sessionlocation)
+     hooks: Dict[str, Hook] = field(default_factory=dict)
+     metadata: Dict[str, str] = field(default_factory=dict)
+     file: Path = None
+Index: os-core-network/daemon/core/emulator/data.py
+===================================================================
+--- os-core-network.orig/daemon/core/emulator/data.py
++++ os-core-network/daemon/core/emulator/data.py
+@@ -252,7 +252,7 @@ class LinkData:
+     network_id: int = None
+     iface1: InterfaceData = None
+     iface2: InterfaceData = None
+-    options: LinkOptions = LinkOptions()
++    options: LinkOptions = field(default_factory=LinkOptions)
+     color: str = None
+     source: str = None
+ 
