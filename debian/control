@@ -40,7 +40,7 @@ XS-Pexip-Upstream: http://ftp.debian.org/debian/ sid
 
 Package: core-network
 Architecture: all
-Depends: ${misc:Depends}, core-network-daemon, core-network-gui, python3-core,
+Depends: ${misc:Depends}, core-network-daemon, python3-core,
 Suggests: tcpdump
 Description: intuitive network emulator that interacts with real nets (metapackage)
  The Common Open Research Emulator (CORE) is a tool for emulating
