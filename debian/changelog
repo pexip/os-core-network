@@ -1,3 +1,9 @@
+core-network (8.2.0-0+pexip24u9) pexip-bookworm; urgency=medium
+
+  * New versioning scheme
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Thu, 01 Feb 2024 15:54:11 +0000
+
 core-network (8.2.0-0pexip8) pexip-bookworm; urgency=medium
 
   * Patch for python3.11 dataclasses.
