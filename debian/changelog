@@ -1,3 +1,9 @@
+core-network (8.2.0-0+pexip25u1) pexip-trixie; urgency=medium
+
+  * Initial trixie build
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Tue, 29 Apr 2025 22:29:16 +0100
+
 core-network (8.2.0-0+pexip24u9) pexip-bookworm; urgency=medium
 
   * New versioning scheme
