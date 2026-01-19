@@ -26,7 +26,22 @@ Last-Update: 2022-06-23
 
 --- core-network-8.2.0.orig/daemon/pyproject.toml
 +++ core-network-8.2.0/daemon/pyproject.toml
-@@ -52,5 +52,5 @@ exclude = ".+_pb2.*.py|doc/|build/|__pyc
+@@ -7,10 +7,10 @@ license = "BSD-2-Clause"
+ repository = "https://github.com/coreemu/core"
+ documentation = "https://coreemu.github.io/core/"
+ include = [
+-    "core/api/grpc/*",
+-    "core/configservices/*/templates",
+-    "core/constants.py",
+-    "core/gui/data/**/*",
++    { path = "core/api/grpc/*", format = ["sdist", "wheel"] },
++    { path = "core/configservices/*/templates", format = ["sdist", "wheel"] },
++    { path = "core/constants.py", format = ["sdist", "wheel"] },
++    { path = "core/gui/data/**/*", format = ["sdist", "wheel"] },
+ ]
+ exclude = ["core/constants.py.in"]
+ 
+@@ -52,5 +52,5 @@ exclude = ".+_pb2.*.py|doc/|build/|__pycache__/"
  
  [build-system]
  requires = ["poetry>=0.12"]
