@@ -9,8 +9,15 @@ export PYBUILD_DIR=daemon
 export PYBUILD_SYSTEM=pyproject
 
 %:
-	dh $@ --with autoreconf,python3 --parallel --buildsystem autoconf
-	dh $@ --with autoreconf,python3 --parallel --buildsystem pybuild
+	dh $@ --with autoreconf,python3 --parallel
+
+override_dh_auto_configure:
+	dh_auto_configure --buildsystem autoconf
+	dh_auto_configure --buildsystem pybuild
+
+override_dh_auto_build:
+	make
+	dh_auto_build --buildsystem pybuild
 
 override_dh_auto_install:
 	make DESTDIR=$(CURDIR)/debian/tmp install

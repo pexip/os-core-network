@@ -1,3 +1,9 @@
+core-network (8.2.0-0+pexip25u3) pexip-trixie; urgency=medium
+
+  * Fix up python3-core package contents.
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Wed, 21 Jan 2026 11:18:16 +0000
+
 core-network (8.2.0-0+pexip25u2) pexip-trixie; urgency=medium
 
   * Trixie build for product distribution

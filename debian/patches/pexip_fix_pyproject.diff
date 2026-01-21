@@ -24,9 +24,11 @@ Forwarded: <no|not-needed|url proving that it has been forwarded>
 Reviewed-By: <name and email of someone who approved the patch>
 Last-Update: 2022-06-23
 
---- core-network-8.2.0.orig/daemon/pyproject.toml
-+++ core-network-8.2.0/daemon/pyproject.toml
-@@ -7,10 +7,10 @@ license = "BSD-2-Clause"
+Index: core-network/daemon/pyproject.toml
+===================================================================
+--- core-network.orig/daemon/pyproject.toml
++++ core-network/daemon/pyproject.toml
+@@ -7,12 +7,12 @@ license = "BSD-2-Clause"
  repository = "https://github.com/coreemu/core"
  documentation = "https://coreemu.github.io/core/"
  include = [
@@ -39,9 +41,12 @@ Last-Update: 2022-06-23
 +    { path = "core/constants.py", format = ["sdist", "wheel"] },
 +    { path = "core/gui/data/**/*", format = ["sdist", "wheel"] },
  ]
- exclude = ["core/constants.py.in"]
+-exclude = ["core/constants.py.in"]
++exclude = ["core/constants.py.in", "core/.gitignore"]
  
-@@ -52,5 +52,5 @@ exclude = ".+_pb2.*.py|doc/|build/|__pycache__/"
+ 
+ [tool.poetry.dependencies]
+@@ -52,5 +52,5 @@ exclude = ".+_pb2.*.py|doc/|build/|__pyc
  
  [build-system]
  requires = ["poetry>=0.12"]
