@@ -1,3 +1,5 @@
+Patch dataclass use to be compatible with python3.11 and newer
+
 Index: os-core-network/daemon/core/api/grpc/wrappers.py
 ===================================================================
 --- os-core-network.orig/daemon/core/api/grpc/wrappers.py

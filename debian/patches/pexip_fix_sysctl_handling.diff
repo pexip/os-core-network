@@ -1,3 +1,5 @@
+Fix sysctl name handling for newer Linux kernels
+
 --- a/daemon/core/nodes/netclient.py
 +++ b/daemon/core/nodes/netclient.py
 @@ -176,7 +176,11 @@
